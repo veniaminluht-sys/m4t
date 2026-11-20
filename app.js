@@ -2,7 +2,7 @@
 /* =====================================================================
    ANDMED (sisu) · kõik väärtused on rakenduse sees, võrku ei vaja
    ===================================================================== */
-const VERSION="2026.11.20-v3";
+const VERSION="2026.11.20-v5";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const $=s=>document.querySelector(s);
 
@@ -585,7 +585,7 @@ async function omFetch(silent){
     const u=`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&hourly=temperature_2m,precipitation,weather_code,visibility,wind_speed_10m,wind_gusts_10m,wind_direction_10m&wind_speed_unit=ms&forecast_days=2&timezone=auto`;
     const ctl=new AbortController(),to=setTimeout(()=>ctl.abort(),12000);
     const r=await fetch(u,{credentials:"omit",cache:"no-store",signal:ctl.signal});clearTimeout(to);
-    if(!r.ok)throw new Error("HTTP "+r.status);if(!/json/.test(r.headers.get("content-type")||""))throw new Error("type");const j=await r.json(),H=j&&j.hourly;
+    if(!r.ok){let why="HTTP "+r.status;try{const ej=await r.json();if(ej&&ej.reason)why=String(ej.reason).slice(0,120)}catch(_){}const er=new Error(why);er.code=r.status;throw er}if(!/json/.test(r.headers.get("content-type")||""))throw new Error("type");const j=await r.json(),H=j&&j.hourly;
     const okArr=k=>Array.isArray(H&&H[k])&&H[k].length===H.time.length;if(!H||!Array.isArray(H.time)||!H.time.length||H.time.length>400||!["temperature_2m","wind_speed_10m","wind_gusts_10m","wind_direction_10m","weather_code","visibility"].every(okArr))throw new Error("shape");
     const target=(S.plan.date&&S.plan.time)?S.plan.date+"T"+S.plan.time.slice(0,2)+":00":null;
     let i=target?H.time.indexOf(target):-1;if(i<0){const n=new Date();const key=n.toISOString().slice(0,13);i=Math.max(0,H.time.findIndex(t=>t.slice(0,13)>=key.slice(0,13)))}
@@ -596,7 +596,7 @@ async function omFetch(silent){
     put("p",wc>=71&&wc<=77||wc===85||wc===86?"snow":wc>=61&&wc<=67||wc>=80&&wc<=82?"rain":wc>=51&&wc<=57?"drizzle":"none");
     put("th",wc>=95?"yes":"no");
     S.wx.src="Open-Meteo";S.wx.at=t;S.wx.confirmed=0;U.net=true;autoChk();ev("wx","prognoos laaditud · Open-Meteo "+H.time[i].slice(11,16),"ok");if(!silent)toast("Ilm laaditud: Open-Meteo, tund "+H.time[i].slice(11,16));
-  }catch(e){U.net=false;if(!silent){ev("wx","Open-Meteo ei vastanud","warn");toast("Open-Meteo ei vastanud. Sisesta väärtused käsitsi.")}}
+  }catch(e){U.net=false;const m=!navigator.onLine?"võrguühendus puudub":e.name==="AbortError"?"ei vastanud 12 s jooksul":e.code===429||/limit/i.test(e.message)?"päringulimiit täis, proovi hiljem":e.code?"viga "+e.code:e.message==="shape"||e.message==="type"?"vastus oli vigane":"ei vastanud";ev("wx","Open-Meteo: "+m,"warn");if(!silent)toast("Open-Meteo: "+m+". Sisesta väärtused käsitsi.")}
   U.wxBusy=false;render(true);
 }
 function gpsFix(silent){
@@ -682,7 +682,7 @@ document.addEventListener("click",e=>{
 });
 document.addEventListener("input",e=>{
   const t=e.target;
-  if(t.dataset.p){const k=t.dataset.p;S.plan[k]=str(t.value,80);if(k==="lat"&&num(t.value)!=null&&Math.abs(num(t.value))>90)S.plan[k]="";if(k==="lon"&&num(t.value)!=null&&Math.abs(num(t.value))>180)S.plan[k]="";if(k==="lat"||k==="lon"){S.plan.locSrc="käsitsi";S.plan.locAt=now()}save();header();clearTimeout(U.pt);U.pt=setTimeout(()=>render(true),600)}
+  if(t.dataset.p){const k=t.dataset.p;S.plan[k]=str(t.value,80);if(k==="lat"&&num(t.value)!=null&&Math.abs(num(t.value))>90)S.plan[k]="";if(k==="lon"&&num(t.value)!=null&&Math.abs(num(t.value))>180)S.plan[k]="";if(k==="lat"||k==="lon"){S.plan.locSrc="käsitsi";S.plan.locAt=now();clearTimeout(U.lt);if(S.auto)U.lt=setTimeout(()=>{if(hasLoc())omFetch(true)},1500)}save();header();clearTimeout(U.pt);U.pt=setTimeout(()=>render(true),600)}
   else if(t.dataset.w){const k=t.dataset.w;if(t.value==="")delete S.wx.f[k];else S.wx.f[k]={v:t.value,src:"käsitsi",at:now()};S.wx.src=S.wx.src||"käsitsi";S.wx.at=now();S.wx.confirmed=0;autoChk();save();clearTimeout(U.pt);U.pt=setTimeout(()=>render(true),700)}
   else if(t.dataset.lim){const k=t.dataset.lim,R={opWind:[1,12],gustDiff:[1,12],batMin:[5,60],wxMaxAgeH:[.5,24]}[k],v=num(t.value);if(R&&v!=null){S.limits[k]=Math.min(R[1],Math.max(R[0],v));save()}}
   else if(t.dataset.inc){S.inc[t.dataset.inc]=str(t.value,4000);save()}
@@ -800,5 +800,5 @@ try{S=sanitize(JSON.parse(localStorage.getItem(KEY)||"null"))}catch(e){S=fresh()
 if(!S.ev.length)ev("sys","käivitus · lend nr "+S.flight.n+" · nimekiri tühi","ok");
 const h0=(location.hash||"").slice(1);U.r=VIEWS[h0]?h0:(S.flight.run?"flight":"ready");
 fxResize();autoChk();render();fxKick();setTimeout(autoRun,600);
-if("serviceWorker" in navigator&&location.protocol==="https:"){try{navigator.serviceWorker.register("sw.js").catch(()=>{})}catch(e){}}
+if("serviceWorker" in navigator&&location.protocol==="https:"){try{const had=!!navigator.serviceWorker.controller;let rl=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had&&!rl&&!S.flight.run){rl=true;location.reload()}});navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{r.update().catch(()=>{});document.addEventListener("visibilitychange",()=>{if(!document.hidden)r.update().catch(()=>{})})}).catch(()=>{})}catch(e){}}
 addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(VIEWS[h]&&h!==U.r)go(h,{noRecent:true})});
