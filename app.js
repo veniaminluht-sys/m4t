@@ -2,7 +2,7 @@
 /* =====================================================================
    ANDMED (sisu) · kõik väärtused on rakenduse sees, võrku ei vaja
    ===================================================================== */
-const VERSION="2026.11.20-v2";
+const VERSION="2026.11.20-v3";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const $=s=>document.querySelector(s);
 
