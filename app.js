@@ -2,7 +2,7 @@
 /* =====================================================================
    ANDMED (sisu) · kõik väärtused on rakenduse sees, võrku ei vaja
    ===================================================================== */
-const VERSION="2026.11.20-v7";
+const VERSION="2026.11.21-v8";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const $=s=>document.querySelector(s);
 
@@ -77,13 +77,13 @@ const prov=a=>`<span class="prov">${a.filter(Boolean).map(esc).join("<i>·</i>")
 
 /* ---------- kontroll-leht: 7 rühma (õhuruumi küsimused on Õhuruumi ekraanil) ---------- */
 const CHECK=[
- {g:"Droon",ic:"flight",items:[["prop","Propellerid terved, kinnitatud ja lukus"],["body","Kere, kaamerad ja andurid puhtad, kahjustusteta"],["bats","Akud laetud ja soojad, numbrid märgitud"],["sd","Mälukaart sees, vaba ruumi piisavalt"],["fw","Püsivara ja andmebaasid ajakohased"]]},
- {g:"Pult",ic:"radio",items:[["rc","Pult (RC Plus 2) laetud"],["ant","Antennid välja keeratud ja drooni suunas"],["bright","Ekraani heledus väljas loetav"],["link","Ühendus droonini stabiilne"]]},
- {g:"Navigatsioon",ic:"nav",items:[["gnss","GNSS satelliite piisavalt, asukoht lukus"],["comp","Kompass ja IMU ilma hoiatusteta"],["home","Koduasukoht salvestatud"],["rth","RTH kõrgus seatud (takistus + 20 m, vähemalt 30 m)"]]},
- {g:"Õhuruum",ic:"air",items:[["atc","Lennuinfo või lennuliiklusteenindust teavitatud, kui ala seda nõuab"],["home2","Hädamaandumiskoht ja naasmise teekond on õhuruumi piires"]]},
+ {g:"Droon",ic:"flight",items:[["prop","Propellerid sama mudeli, terved, kinnitatud ja lahti volditud"],["body","Kaamerad, nägemisandurid ja infrapunaklaas puhtad"],["gimb","Gimbali kaitse eemaldatud, õhuavad vabad"],["bats","Akud täis, klambrid lukus, akud toasoojad"],["sd","Mälukaart sees, vaba ruumi piisavalt"],["fw","Püsivara ja DJI Pilot 2 uuendatud"]]},
+ {g:"Pult",ic:"radio",items:[["rc","Pult (RC Plus 2) laetud"],["ant","Antennid õigesti ja drooni suunas"],["bright","Ekraani heledus väljas loetav"],["link","Ühendus droonini stabiilne"]]},
+ {g:"Navigatsioon",ic:"nav",items:[["gnss","GNSS tugev, kodupunkt salvestatud"],["comp","Kompass ja IMU ilma hoiatusteta"],["rth","RTH kõrgus seatud üle kõrgeimate takistuste"],["lost","Sidekao toiming (RTH) kontrollitud"],["geo","DJI geoalade andmed uuendatud"]]},
+ {g:"Õhuruum",ic:"air",items:[["atc","Lennuplaan esitatud või lennuliiklusteenistust teavitatud, kui ala nõuab"],["home2","Hädamaandumiskoht ja naasmise teekond on õhuruumi piires"]]},
  {g:"Ilm",ic:"wx",items:[["wind","Tuul ja puhangud piirides"],["precip","Sademeid ei ole"],["vis","Nähtavus piisav, VLOS säilib"],["tempc","Temperatuur tootja piirides"]]},
- {g:"Dokumendid ja pädevus",ic:"doc",items:[["pilot","Kaugpiloodi pädevus kehtiv"],["opreg","Käitaja registreering või ülesande alus olemas"],["ins","Kindlustus või asutuse kord kehtib"]]},
- {g:"Meeskond ja ala",ic:"team",items:[["roles","Rollid jaotatud (piloot, vaatleja)"],["comms","Side meeskonnaga toimib"],["area","Stardi- ja maandumisala vaba"],["emland","Hädamaandumiskoht määratud"]]}
+ {g:"Dokumendid ja pädevus",ic:"doc",items:[["pilot","Kaugpiloodi pädevus kehtiv"],["opreg","Käitaja registreering või ülesande alus olemas"],["rid","Kaugtuvastuse number DJI Pilot 2-s"],["ins","Kindlustus või asutuse kord kehtib"]]},
+ {g:"Meeskond ja ala",ic:"team",items:[["roles","Rollid jaotatud (piloot, vaatleja)"],["comms","Side meeskonnaga toimib"],["area","Stardiala lage ja tasane, droon piloodist 5 m eemal"],["emland","Hädamaandumiskoht määratud"]]}
 ];
 const CK_ALL=CHECK.flatMap(g=>g.items.map(i=>i[0]));
 /* ---------- riskid ---------- */
@@ -109,67 +109,98 @@ const AIRQ=[
  ["vlos","Kas droon on kogu lennu ajal nähtav (VLOS)?",[["Jah","g"],["Vaatlejaga","y"],["Ei","r"]]],
  ["crowd","Kas lend toimub inimkogunemise kohal?",[["Ei","g"],["Jah","r"]]]
 ];
-/* ---------- hädaolukorrad: 5 sammu, sama järjekord igal pool ---------- */
+/* ---------- hädaolukorrad: 5 sammu; tootjapõhised sammud DJI Matrice 4 kasutusjuhendist (v1.2) ---------- */
 const STEP=["Kohe","Kontrolli","Tegutse","Kui ei aita","Pärast"];
 const EMERG=[
- ["link","Side kadunud","radio",["Ära vajuta nuppe juhuslikult. Droon täidab seadistatud sidekao toimingu, vaikimisi naaseb koju.","Antennide suund, takistused drooni ja puldi vahel, puldi teated.","Liigu kõrgemale või lagedamale ja suuna antennid drooni poole. Oota ühenduse taastumist.","Jälgi taevast ja naasmise teekonda. Kui droon võib siseneda lennujaama alasse, teavita lennuliiklusteenindust.","Märgi aeg ja viimane teadaolev asukoht. Koosta intsidendi raport."]],
- ["gps","GPS kadunud","gps",["Droon lülitub asendirežiimi (ATTI) ega hoia enam kohta. See võib tuulega triivida.","Kõrgus, kaugus ja tuule suund. Hoia droon silma all.","Juhi käsitsi ja lühikeste liigutustega. Lenda tagasi vastutuult.","Maandu lähimas ohutus kohas. Vee kohal eelista kallast või paati.","Logi aeg ja asukoht. Kontrolli enne järgmist lendu kompassi ja IMU-d."]],
- ["bat","Aku kriitiline","bat",["Droon alustab ise naasmist. Kriitilisel tasemel maandub see seal, kus parasjagu on.","Kaugus lähima ohutu maandumiskohani ja kõrgus.","Juhi otse lähima ohutu koha poole. Vajadusel katkesta naasmine ja maandu lähemale.","Vali koht eemal inimestest. Viimase võimalusena eelista vett asustusele.","Märgi aku kasutusest välja kuni kontrollini. Logi juhtum."]],
- ["wind","Tugev tuul","wx",["Tuulehoiatus tähendab, et tagasilennuks jääb vähe varu.","Kiirus maapinna suhtes ja aku kulu puldis.","Lasku madalamale, kus tuul on nõrgem, ja lenda tagasi.","Maandu lähimas ohutus kohas, vajadusel allatuult, ja korja droon hiljem.","Logi tuuleandmed. Kaalu oma tuulepiiri alandamist."]],
- ["air","Mehitatud õhusõiduk lähedal","flight",["Lasku kohe madalale ja anna teed. Mehitatud õhusõidukil on alati eesõigus.","Õhusõiduki suund, kõrgus ja kaugus.","Hoia droon madalal ja eemal, kuni õhusõiduk on möödunud.","Maandu.","Logi aeg ja kirjelda olukorda raportis."]],
- ["fly","Droon ei allu","flight",["Vajuta pausinuppu või RTH-nuppu. Kontrolli lennurežiimi lülitit.","Puldi hoiatused. Kas droon on nähtaval?","Hoiata inimesi ja hoia neid drooni võimaliku teekonna alt eemal.","Helista 112. Kui droon võib minna lennujaama alasse, teavita lennuliiklusteenindust.","Säilita lennulogid ja ära kustuta andmeid. Koosta raport."]],
- ["obst","Kokkupõrkeoht","obstacle",["Peata liikumine pausinupuga.","Takistuse kaugus kaamerapildilt ja andurite hoiatustest.","Tõuse vertikaalselt ja liigu siis takistusest eemale.","Maandu kontrollitult lähimas vabas kohas.","Kontrolli enne järgmist lendu propellereid ja kere."]],
- ["rth","RTH lendab vales suunas","home",["Katkesta naasmine.","Koduasukoht kaardil ja kompassi hoiatused.","Juhi droon käsitsi tagasi ja hoia see silma all.","Maandu ohutult ja märgi koht drooni leidmiseks.","Uuenda koduasukohta ja kalibreeri enne järgmist lendu kompass."]],
- ["zone","Droon on piirangualas","air",["Peata liikumine.","Mis ala see on ja kes on ala valdaja. Vaata Õhuruumi ekraanilt.","Välju alast lühimat teed, mitte inimeste kohalt.","Võta ühendust ala valdaja või lennuliiklusteenindusega.","Märgi aeg ja teekond. Koosta intsidendi raport."]],
- ["land","Sundmaandumine","flag",["Vali lähim vaba maandumiskoht.","Inimesed, vesi, puud ja elektriliinid.","Lasku aeglaselt ja maandu käsitsi.","Hoiata inimesi häälega. Vali koht, kus kahju on kõige väiksem.","Tähista koht. Korja droon ja akud ettevaatlikult: kahjustatud aku võib süttida."]]
+ ["link","Side kadunud","radio",["Ära vajuta nuppe juhuslikult. Kui sidekao toiminguks on seatud RTH, alustab droon ise naasmist.","Antennide asend, takistused drooni ja puldi vahel, puldi teated.","Liigu kõrgemale või lagedamale ja suuna antennid drooni poole. Kui side taastub, saad naasmise katkestada RTH- või pausinupuga.","Helista lennujuhile +372 625 8260. Ütle drooni lennusuund, järelejäänud lennuaeg ja maksimumkiirus (M4T 21 m/s).","Märgi aeg ja viimane teadaolev asukoht. Koosta intsidendi raport."]],
+ ["gps","GPS kadunud (ATTI)","gps",["Droon läheb ATTI-režiimi: see ei hoia kohta, ei pidurda ise ja triivib tuulega.","Kõrgus, tuule suund ja kas droon on silma all. Ära lenda vee ega klaasfassaadide kohal, hoia kõrgus alla 30 m.","Juhi käsitsi ja maandu esimesel võimalusel. Ära looda RTH-le, sest kodupunkt võib olla vale.","Maandu lähimas ohutus kohas. Vee kohal eelista kallast või paati.","GNSS-häirest teata TTJA-le (ttja.ee/teade). Kontrolli enne järgmist lendu kompassi ja IMU-d."]],
+ ["bat","Aku madal või kriitiline","bat",["Madala aku hoiatusel alustab droon naasmist, kui sa seda ei tühista. Kui akust jätkub ainult laskumiseks, maandub droon ise ja seda ei saa tühistada.","Mis on otse drooni all? Horisontaalselt saad liikuda ka automaatse maandumise ajal.","Juhi droon ohutu koha kohale. Ära lükka automaatse maandumise ajal gaasikangi üles, muidu võib droon tühja akuga kukkuda.","Vali koht eemal inimestest. Viimase võimalusena eelista vett asustusele.","Ära lae akut kohe pärast lendu. Märgi aku kasutusest välja kuni kontrollini ja logi juhtum."]],
+ ["wind","Tugev tuul","wx",["Tugeva tuulega ei pruugi droon kodupunkti tagasi jõuda.","Kiirus maapinna suhtes ja aku kulu puldis.","Lasku madalamale, kus tuul on nõrgem, ja lenda tagasi.","Maandu lähimas ohutus kohas, vajadusel allatuult, ja korja droon hiljem.","Logi tuuleandmed. Kaalu oma tuulepiiri alandamist."]],
+ ["air","Mehitatud õhusõiduk lähedal","flight",["Lasku kohe madalale ja anna teed. Mehitatud õhusõidukil on alati eesõigus.","Õhusõiduki suund, kõrgus ja kaugus.","Hoia droon madalal ja eemal, kuni õhusõiduk on möödunud.","Maandu.","Logi aeg ja kirjelda olukorda. Mehitatud õhusõidukiga seotud juhtumist on teatamine kohustuslik."]],
+ ["fly","Droon ei allu","flight",["Lase kangid lahti või vajuta pausinuppu: droon pidurdab ja jääb paigale, kui GNSS või nägemissüsteem töötab.","Puldi hoiatused ja lennurežiimi lüliti. Kas droon on nähtaval?","Proovi RTH-nuppu. Hoiata inimesi ja hoia neid drooni võimaliku teekonna alt eemal.","Helista lennujuhile +372 625 8260 (suund, järelejäänud lennuaeg, maksimumkiirus 21 m/s). Kui oht on inimestele, helista 112.","Säilita lennulogid ja ära kustuta andmeid. Koosta raport."]],
+ ["obst","Kokkupõrkeoht","obstacle",["Vajuta pausinuppu.","Takistuse kaugus kaamerapildilt ja andurite hoiatustest.","Tõuse vertikaalselt ja liigu siis takistusest eemale.","Maandu kontrollitult lähimas vabas kohas.","Kontrolli enne järgmist lendu propellereid ja kere."]],
+ ["rth","RTH lendab vales suunas","home",["Katkesta naasmine RTH- või pausinupuga.","Koduasukoht kaardil ja kompassi hoiatused.","Juhi droon käsitsi tagasi ja hoia see silma all.","Maandu ohutult ja märgi koht drooni leidmiseks.","Uuenda enne järgmist lendu koduasukohta ja kalibreeri kompass."]],
+ ["zone","Droon on piirangualas","air",["Peata liikumine.","Mis ala see on ja kes on ala valdaja. Vaata Õhuruumi ekraanilt.","Välju alast lühimat teed, mitte inimeste kohalt.","Võta ühendust ala valdaja või lähima lennuliiklusteenistusega.","Märgi aeg ja teekond. Koosta intsidendi raport."]],
+ ["land","Sundmaandumine","flag",["Vali lähim vaba maandumiskoht.","Inimesed, vesi, puud ja elektriliinid.","Lasku aeglaselt ja maandu käsitsi. Mootoreid ära seiska õhus: see põhjustab kukkumise. Seda tohib teha ainult kriitilise vea korral.","Hoiata inimesi häälega. Vali koht, kus kahju on kõige väiksem.","Tähista koht. Korja droon ja akud ettevaatlikult: kahjustatud aku võib süttida."]]
 ];
-/* ---------- juhend: otsitavad küsimused ja vastused ---------- */
+/* ---------- ametlikud numbrid; kontrollitud 21.11.2026 ----------
+   lennuliiklusteenistused: eAIP GEN 3.3, AIRAC 09/2026; EANS lennujuht: eans.ee (droonid); Transpordiamet: transpordiamet.ee */
+const ATS=[
+ {id:"EETN",n:"Tallinn TWR",tel:"+372 625 8260",z:"EEGZ1"},
+ {id:"EETU",n:"Tartu AFIS",tel:"+372 671 0244",z:"EEGZ7"},
+ {id:"EEPU",n:"Pärnu AFIS",tel:"+372 447 5008",z:"EEGZ10",h:[8*60,16*60+30]},
+ {id:"EEKE",n:"Kuressaare AFIS",tel:"+372 671 0242",z:"EEGZ13"},
+ {id:"EEKA",n:"Kärdla AFIS",tel:"+372 463 1002",z:"EEGZ16"},
+ {id:"EEEI",n:"Ämari TWR",tel:"+372 717 3415",z:"EEGZ19"}];
+const OFFICIAL=[
+ ["Hädaabi","112",""],
+ ["Lennujuht (EANS) · droon kontrolli alt väljas","+372 625 8260","Ütle lennusuund, järelejäänud lennuaeg ja maksimumkiirus."],
+ ["EANS NOTAM-büroo","+372 671 0257","NOTAM-ide küsimused"],
+ ["Transpordiamet · klienditugi","+372 620 1200","Tööpäeviti. Load, LOIS, registreerimine."]];
+const OFFICIAL_SRC="Kontrollitud 21.11.2026: eAIP GEN 3.3 (AIRAC 09/2026), eans.ee, transpordiamet.ee";
+const telHref=t=>"tel:"+String(t).replace(/[^\d+]/g,"");
+function nearestATS(){if(!hasLoc())return null;const o=[num(S.plan.lat),num(S.plan.lon)];let best=null;
+  for(const a of ATS){const z=ZONES.find(x=>x.id===a.z);if(!z)continue;const d=Math.max(0,zDist(z,o));if(!best||d<best.d)best={a,d}}return best}
+function atsOpen(a){if(!a.h)return null;const off=-new Date().getTimezoneOffset();if(off!==120&&off!==180)return null;const d=new Date(),m=d.getHours()*60+d.getMinutes();return m>=a.h[0]&&m<a.h[1]}
+const hm=m=>String(Math.floor(m/60)).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
+
+/* ---------- juhend: seadus · tootja · rakendus. Iga vastuse juures on allikas ---------- */
 const HELP=[
- ["start","Kiirstart","play",[
-  ["Kuidas lendu ette valmistada?","1. Ava Plaan ja vali mall või sisesta kõrgus, raadius ja kestus.\n2. Asukoht tuleb GPS-ist. Kui GPS-i pole, sisesta koordinaadid käsitsi.\n3. Ilm laaditakse automaatselt. Kontrolli Ilma ekraanil, et väärtused on mõistlikud.\n4. Õhuruumi ekraan näitab, mis alas oled. Vasta viiele küsimusele ja kinnita.\n5. Hinda riskid ja tee kontroll läbi.\n6. Kui Valmidus näitab „Valmis stardiks“, vajuta Alusta lendu."],
-  ["Mis vahe on Plaanil ja Valmidusel?","Plaanis kirjeldad lendu: kus, kui kõrgel, kui kaua. Valmidus näitab, kas kõik neli kontrolli (ilm, õhuruum, riskid, kontroll-leht) on tehtud ja mis on veel pooleli."],
-  ["Mida tähendab „Start ootel“?","Vähemalt üks kontroll on pooleli või näitab probleemi. Puuduta nuppu, et näha, mis on puudu. Saad alustada ka teadlikult. Siis logitakse, et start toimus lahtiste kontrollidega."]]],
- ["states","Olekud ja värvid","ready",[
-  ["Mida värvid tähendavad?","Roheline OK: kontroll on tehtud ja korras.\nKollane HOIATUS: lennata saab, aga arvesta hoiatusega ja kinnita see.\nPunane EI SOBI: sel kujul ei lennata.\nHall KONTROLLIMATA või ANDMED PUUDUVAD: keegi pole seda veel kontrollinud. Hall ei tähenda kunagi, et kõik on korras."],
-  ["Miks õhuruum ei muutu ise roheliseks?","Rakendus tunneb ainult AIP-s avaldatud alasid. Looduskaitse- ja julgeolekualad ning ajutised piirangud (NOTAM) on ainult EANS Droonikaardil. Seepärast kinnitab õhuruumi alati piloot ise."],
-  ["Miks ilm muutub vahel ise roheliseks?","Kui automaatika on sees ja kõik põhiandmed tulevad värskelt Open-Meteost ilma hoiatusteta, kinnitab rakendus ilma ise. Kui mõni väärtus on käsitsi muudetud, vana või hoiatusega, pead kinnitama ise."]]],
- ["wx","Ilm","wx",[
-  ["Kust ilmaandmed tulevad?","Open-Meteo prognoosist plaanitud tunniks. Iga väärtuse juures on allikas ja vanus. Merel ja rannas võib tegelik tuul prognoosist erineda. Usalda kohapealset mõõtmist ja puldi hoiatusi."],
-  ["Millal ilm aegub?","Seadetes määratud aja järel, vaikimisi 3 tunni pärast. Aegunud ilm muutub kollaseks ja tuleb uuesti laadida."],
-  ["Miks ilm ei laadi?","Põhjuseks võib olla võrguühenduse puudumine või Open-Meteo päringulimiit. Teade ütleb täpse põhjuse. Saad sisestada väärtused käsitsi Ilma ekraanil."],
-  ["Kuidas arvutatakse lennuaeg aku kohta?","Aluseks on seadetes määratud aeg (vaikimisi 30 min). Tuul üle 3 m/s vähendab seda 3,5 % iga m/s kohta (kuni 30 %), temperatuur alla 10 °C 1,8 % iga kraadi kohta (kuni 25 %). See on planeerimise hinnang. Tegelik aku tase on puldis."]]],
- ["air","Õhuruum","air",[
-  ["Kuidas rakendus alasid kontrollib?","Rakenduses on Eesti eAIP-st (AIRAC 09/2026) võetud UAS-geoalad (EEGZ), piirangualad (EER), Nurmsi ajutiselt eraldatud ala ja õppelennualad. Rakendus arvutab, kas asukoht on alas, kas lennuring ulatub alasse ja kas plaanitud kõrgus ületab ala piiri."],
-  ["Mida rakendus EI kontrolli?","Valitsuse kehtestatud looduskaitse-, julgeoleku- ja PPA alasid (näiteks piiriäärseid alasid), ajutisi piiranguid (NOTAM) ega AIRAC-i uuemaid muudatusi. Need vaata EANS Droonikaardilt (utm.eans.ee), mis näitab ka NOTAM-e."],
-  ["Mida tähendab „tsoon 50 m“?","Selles alas tohib avatud kategoorias lennata kuni 50 m kõrgusel. Kõrgemale lendamiseks on vaja luba, mis on kirjas ala juures."],
-  ["Mis on ala „lennuala“?","Lennujaama vahetu ala. Seal on vaja luba igal kõrgusel."],
-  ["Kuidas NOTAM-e kontrollida?","Ava Õhuruumi ekraanilt Droonikaart või NOTAM-ide nimekiri (PIB). Kui mõni NOTAM puudutab sinu ala või aega, märgi see vastusena ja kirjuta märkmetesse."],
-  ["Riigilennud ja PPA","Riigilennundusele võivad kehtida asutuse eraldi reeglid ja kooskõlastused. Rakendus näitab alasid teadlikkuse jaoks. Otsuse teeb sinu üksuse korra järgi piloot."]]],
- ["flight","Lend","flight",[
-  ["Miks rakendus ei näita drooni akut ega asukohta?","Drooni andmed on puldis. Rakendus ei dubleeri neid. See on tugi ja kindlustus: peab lennuaega, tuletab plaanitud aega meelde, salvestab märked ja hoiab hädaolukorra juhised käepärast."],
-  ["Mis on plaanitud lennuaja meeldetuletus?","Kui plaanitud aku aeg on täis, annab telefon teate ja värinaga märku. See on varumeeldetuletus, mitte aku näit. Kontrolli puldist tegelikku taset."],
-  ["Kuidas märge lisada?","Lennu ajal vajuta Vaatlus, Leid või Probleem. Märkesse lähevad kellaaeg ja telefoni asukoht. Lisada saad märkuse ja foto. Märked lähevad lennupäevikusse."],
-  ["Miks märke asukoht ei ole drooni asukoht?","Rakendus teab ainult telefoni asukohta. Sihtmärgi koordinaadid võta DJI puldist ja kirjuta need märkusesse."]]],
- ["log","Lennupäevik ja intsident","after",[
-  ["Mis lennupäevikusse salvestub?","Lennu number, kuupäev, aeg ja kestus, piloot ja vaatleja, droon ja seerianumber, kasutatud akud, ala ja koordinaadid, ülesanne, kõrgus, ilm stardi ajal, kontrollide seis, märked ja märkus."],
-  ["Kuidas päevikut välja võtta?","Päeviku ekraanil saad kopeerida CSV-faili (tabelarvutuse jaoks) või printida või salvestada PDF-ina. Telefonis vali printimisaknas „Salvesta PDF-ina“ või jagamisnupp."],
-  ["Kuidas intsidenti raporteerida?","Ava päevikus lend ja vajuta Koosta intsidendi raport. Täida väljad ja lisa fotod. Jaga nupp saadab teksti koos fotodega (e-post, Signal, Teams). Kui jagamine pole toetatud, kopeeri tekst ja lisa fotod eraldi."],
-  ["Kus fotod asuvad?","Ainult selles telefonis, rakenduse andmebaasis. Fotod vähendatakse ja asukohaandmed eemaldatakse. Andmete ekspordis (JSON) fotosid ei ole."]]],
- ["sos","Hädaolukorrad","sos",[
-  ["Kus on hädaolukorra juhised?","Punane SOS-nupp on alati ülal paremal. Igal olukorral on viis sammu: Kohe, Kontrolli, Tegutse, Kui ei aita, Pärast. Juhised on üldised. Järgi oma üksuse korda ja DJI kasutusjuhendit."],
-  ["Kuidas kontakte lisada?","Seaded, Kontaktid. Lisa ainult kontrollitud numbrid, näiteks lennuinfoteenistus ja oma juhtimiskeskus. Need on SOS-aknas ühe puudutusega helistamiseks."]]],
- ["device","Telefon ja paigaldus","phone",[
-  ["Kuidas panna rakendus avaekraanile?","iPhone: ava aadress Safaris, siis jagamisnupp ja Lisa avaekraanile.\nAndroid: ava Chrome'is, siis menüü ⋮ ja Lisa avaekraanile."],
-  ["GPS ei tööta iPhone'is","Seaded → Privaatsus ja turvalisus → Asukohateenused → Safari veebisaidid → Rakenduse kasutamisel. Seejärel Safaris aA → Veebisaidi seaded → Asukoht → Luba."],
-  ["Kas rakendus töötab ilma võrguta?","Jah. Rakendus ja salvestatud andmed töötavad ilma võrguta. Ilma uuendamiseks on vaja võrku. Laadi ilm sadamas või kohas, kus on levi."],
-  ["Kuidas rakendus uueneb?","Iseenesest. Kui on uus versioon, laeb rakendus selle avamisel ja käivitub uuesti. Lennu ajal uuendust ei rakendata."]]],
- ["data","Andmed ja turvalisus","lock",[
-  ["Kus mu andmed on?","Ainult selles seadmes. Kontot ega pilve ei ole. Võrku läheb ainult ilmapäring Open-Meteosse."],
-  ["Kuidas andmeid varundada?","Seaded, Andmed, Ekspordi. Salvesta JSON-fail turvalisse kohta. Sama failiga saad andmed teise seadmesse importida."],
-  ["Mida ei tohi sisestada?","Salastatud teavet ega teiste inimeste isikuandmeid. Rakendus ei ole akrediteeritud infosüsteem."]]],
- ["m4t","Matrice 4T põhiandmed","info",[
-  ["Tootja piirid","Tuulekindlus 12 m/s. Töötemperatuur −10…+40 °C. Lennuaeg kuni 49 min ideaaltingimustes. IP-klass puudub, seega vihmas ei lennata. Klass C2. Kaamerad: lainurk, tele ja termokaamera 640 × 512. Kontrolli andmeid DJI ametlikust spetsifikatsioonist."],
-  ["Kuidas arvutatakse RTH kõrgus?","Kõrgeim takistus + 20 m, kuid vähemalt 30 m. Sea see puldis enne starti."]]]
+ ["law","Kellele mis reeglid kehtivad","doc","Seadus ja reeglid",[
+  ["Kas EL droonireeglid kehtivad PPA lendudele?","PPA droonid on riiklikud õhusõidukid. Need ei kuulu tsiviillennunduse nõuete alla ega EASA alusmääruse kohaldamisalasse. Riikliku mehitamata õhusõiduki käitamisnõuded kehtestab valdkonna minister määrusega.\nKliimaministeeriumi 18.11.2024 kirja järgi polnud siis ühegi valitsemisala kohta otsust tehtud. Õhuruumi reeglid kehtivad igal juhul.\nJärgi PPA kehtivat korda. Tsiviilreeglid (EL 2019/947) on hea võrdlusalus.","Lennundusseadus § 4 lg 3² · Kliimaministeeriumi kiri 18.11.2024"],
+  ["Mis on avatud kategooria põhireeglid?","Lennukõrgus kuni 120 m maapinnast. Droon peab olema kogu lennu ajal palja silmaga nähtav (VLOS), kaamera kaudu vaatamine ei loe. Kõrvaliste inimeste kohal lennata ei tohi. Käitaja peab olema registreeritud ja registreerimisnumber peab olema droonil. Kaugpiloot peab olema vähemalt 16-aastane.","EL 2019/947 · transpordiamet.ee/droonid"],
+  ["Mis kehtib Matrice 4T-le (klass C2)?","C2-drooniga saab lennata alamkategoorias A2 (A3 on samuti lubatud). Kõrvalistest inimestest tuleb hoida vähemalt 30 m horisontaalset kaugust. Madala kiiruse režiimiga võib kaugust vähendada 5 m-ni, kui ilm, drooni jõudlus ja ala seda lubavad. Hea tava on 1:1 reegel: kaugus inimestest vähemalt sama suur kui lennukõrgus.","EL 2019/947 UAS.OPEN.030 · EASA KKK"],
+  ["Millist pädevust on vaja?","A1/A3 jaoks on vaja veebikoolitust ja LOIS-i testi. A2 jaoks on lisaks vaja iseseisvat praktilist väljaõpet ja Transpordiameti järelevalvega eksamit. Pädevustunnistus kehtib 5 aastat ja seda tunnustatakse kõigis EASA riikides.","transpordiamet.ee/droonid · EASA KKK (DRONE.OPEN.070)"],
+  ["Millal on vaja erikategooriat?","Kui mõni avatud kategooria tingimus ei täitu, näiteks lend üle 120 m, ilma otsenähtavuseta (BVLOS) või inimeste kohal. Siis on vaja käitamisluba. Taotlus käib LOIS-i kaudu.","transpordiamet.ee/droonid"]]],
+ ["where","Kus tohib lennata","air","Seadus ja reeglid",[
+  ["Kust leian kehtivad alad?","EANS Droonikaardilt (utm.eans.ee või äpp „Estonian Drone Map“). Seal on geoalad, kõrguspiirangud ja loa andja kontakt. Rakenduses on AIP-alad teadlikkuse jaoks, aga valitsuse kehtestatud alasid ja ajutisi piiranguid näeb ainult Droonikaardil.","eans.ee · err.ee"],
+  ["Kas NOTAM-e peab kontrollima?","Jah. NOTAM-id on kohustuslikud kõigile pilootidele, ka avatud kategooria droonilennutajatele. NOTAM-is on ala kirjeldus, kõrgus (nt SFC–FL055: maapinnast kuni 5500 jalga) ja kehtivusaeg. Nimekiri: aim.eans.ee/notampib/notampib.pdf.","eans.ee (droonid)"],
+  ["Kuidas lennata lennujaama lähedal?","Klõpsa Droonikaardil plaanitud kohal ja vaata kõrguspiire ja tingimusi. Esita lennuplaan ja küsi stardiluba. Ära stardi enne loa saamist. Hoia telefoni teavitused ja heli sees, sest lennujuht võib helistada.","eans.ee (droonid)"],
+  ["Kas õnnetuskohal tohib lennata?","Avatud kategoorias ei tohi. PPA tuletab meelde, et õnnetuskohal on droonilend keelatud, kui pole luba. Riigiülesannet täites järgi oma üksuse korda.","EL 2019/947 UAS.OPEN.060 · transpordiamet.ee/droonid"]]],
+ ["report","Juhtumitest teatamine","sos","Seadus ja reeglid",[
+  ["Millest pean teatama?","Kohustuslik on teatada, kui droonijuhtum põhjustas inimese surma või raske vigastuse või puudutas mehitatud õhusõidukit. Muudest juhtumitest võib teatada vabatahtlikult. See aitab ohutust parandada.","EL 376/2014 art 3 · EL 2019/947 art 19"],
+  ["Kuhu GPS-i häiretest teatada?","Droonijuhtumitest, näiteks GPS-signaali kadumisest või häirimisest, teata Tarbijakaitse ja Tehnilise Järelevalve Ametile: ttja.ee/teade.","transpordiamet.ee/droonid"],
+  ["Mida teha, kui droon lendab kontrolli alt välja?","Helista kohe lennujuhile +372 625 8260. Ütle, mis suunas droon lendas, kui kaua akust veel jätkub ja drooni maksimumkiirus (M4T 21 m/s). Number on ka SOS-aknas.","eans.ee (droonid) · DJI M4 spetsifikatsioon"]]],
+ ["m4t","Matrice 4T piirid","info","Tootja: DJI Matrice 4T",[
+  ["Tootja piirid","Tuulekindlus 12 m/s (õhkutõusul ja maandumisel). Töötemperatuur −10…+40 °C. Lennuaeg kuni 49 min, hõljumine kuni 42 min (standardpropellerid, ideaaltingimused). Maksimumkiirus 21 m/s. Tõus 10 m/s, laskumine 8 m/s. Videoside kuni 12 km (CE).","DJI Matrice 4 spetsifikatsioon"],
+  ["Kas M4T talub vihma?","Ei. DJI andmetel ei ole Matrice 4 seeria veekindel ja IP-klassi pole määratud. Vihmas, lumes ja udus ei lennata.","DJI Matrice 4 KKK · kasutusjuhend"],
+  ["Mass ja klass","Klass C2, suurim stardimass 1430 g. Lisavarustusega ei tohi seda ületada. Klassi järgimiseks kasuta ainult DJI lubatud osi.","DJI M4 kasutusjuhend v1.2, ptk 8.10"],
+  ["Kaugtuvastus (Remote ID)","Sisesta käitaja registreerimisnumber: DJI Pilot 2 → GEO Zone Map → UAS Remote Identification.","DJI M4 kasutusjuhend v1.2, ptk 8.10"],
+  ["Madala kiiruse režiim (EL)","EL-is lülitab F-asend (T-režiim) sisse madala kiiruse režiimi, kus horisontaalkiirus on piiratud 2,8 m/s-ga. Seda on vaja, kui lendad inimestele lähemal kui 30 m (vähemalt 5 m).","DJI M4 kasutusjuhend v1.2, ptk 4.1 · EL 2019/947"]]],
+ ["rthd","Naasmine (RTH)","home","Tootja: DJI Matrice 4T",[
+  ["Millal droon ise naaseb?","Kui piloot vajutab RTH-nuppu, kui aku on madal või kui puldi signaal kaob ja sidekao toiminguks on RTH. Droon lendab viimati salvestatud kodupunkti.","DJI M4 kasutusjuhend v1.2, ptk 4.9"],
+  ["RTH kõrgus","Sea sobiv RTH kõrgus enne iga lendu. Tehase väärtus on 100 m ja naasmise ajal seda muuta ei saa. Rakendus soovitab vähemalt kõrgeim takistus + 20 m (minimaalselt 30 m).","DJI M4 kasutusjuhend v1.2, ptk 4.9"],
+  ["Kuidas naasmist katkestada?","Vajuta uuesti RTH-nuppu. Kui side on hea, saab naasmise katkestada ka pausinupuga.","DJI M4 kasutusjuhend v1.2"],
+  ["Tuul ja RTH","Väga tugeva tuulega ei pruugi droon kodupunkti tagasi jõuda. Ilma GNSS-ita naasmisel peab tuul olema alla 3 m/s.","DJI M4 kasutusjuhend v1.2, ptk 4.9"]]],
+ ["batd","Aku","bat","Tootja: DJI Matrice 4T",[
+  ["Külm ilm","Alla −10 °C akut kasutada ei saa. Külmas väheneb aku mahtuvus. Soojenda aku enne starti toatemperatuurini ja lase droonil pärast õhkutõusu veidi hõljuda, et aku soojeneks. Matrice 4 aku ise ei soojene.","DJI M4 kasutusjuhend v1.2, ptk 4.7 · DJI KKK"],
+  ["Laadimine","Laadimistemperatuur 5…40 °C, ideaalne 22–28 °C. Ära lae akut kohe pärast lendu. Aku laeb ainult Matrice 4 laadimisjaamas. Valmisolekurežiimis laeb jaam akud 90 %-ni, umbes 60 min aku kohta.","DJI M4 kasutusjuhend v1.2 · DJI KKK"],
+  ["Hoiustamine ja transport","Lae aku täis vähemalt kord kolme kuu jooksul. Enne transporti on soovitatav tühjendada aku 30 %-ni või vähem. Alla 10 % jäänud aku läheb talveunerežiimi.","DJI M4 kasutusjuhend v1.2, ptk 4.7"],
+  ["Automaatne maandumine","Kui akust jätkub ainult laskumiseks, maandub droon ise ja seda ei saa tühistada. Horisontaalselt saad liikuda. Ära lükka sel ajal gaasikangi üles.","DJI M4 kasutusjuhend v1.2"]]],
+ ["navd","GNSS, kompass ja pausinupp","gps","Tootja: DJI Matrice 4T",[
+  ["Mis on ATTI-režiim?","Kui nägemissüsteem ei tööta ja GNSS on nõrk või kompass on häiritud, läheb droon ATTI-režiimi. Siis ei hoia droon kohta, ei pidurda ise ja triivib tuulega. Olekutuli vilgub aeglaselt kollaselt. Maandu esimesel võimalusel.","DJI M4 kasutusjuhend v1.2, ptk 4.1"],
+  ["Kus GNSS-ita olla ettevaatlik?","Vee ja klaasfassaadide kohal ning üle 30 m kõrgusel. Kui droon läheb ATTI-režiimi enne tugeva GNSS-i saamist, võib kodupunkt olla vale.","DJI M4 kasutusjuhend v1.2"],
+  ["Pausinupp","Ühekordne vajutus pidurdab drooni ja jätab selle paigale (kui GNSS või nägemissüsteem töötab).","DJI M4 kasutusjuhend v1.2"],
+  ["Mootorite hädaseiskamine","Mootorite seiskamine õhus põhjustab kukkumise. Kangide kombinatsiooniga (CSC) võib mootorid seisata ainult siis, kui lennukontroller on tuvastanud kriitilise vea.","DJI M4 kasutusjuhend v1.2, ptk 3"]]],
+ ["pre","Lennueelne kontroll tootja järgi","chk","Tootja: DJI Matrice 4T",[
+  ["Mida DJI enne lendu nõuab?","Droon ja pult on täis laetud ning aku klambrid lukus. Õhuavad on vabad. Propellerid on sama mudeli, terved, kinnitatud ja lahti volditud. Nägemisandurid, kaamerad ja infrapunaklaas on puhtad. Gimbali kaitse on eemaldatud. Puldi antennid on õigesti. Püsivara ja DJI Pilot 2 on uuendatud. Droon on lagedal tasasel pinnal, piloodist 5 m eemal. Lennuala on lubatud.","DJI M4 kasutusjuhend v1.2, ptk 3.5"],
+  ["Geoalad DJI-s","Laadi enne starti alla riigi lennundusameti uusimad geoalade andmed. Nõrga GNSS-iga töötab geoteadlikkus halvemini. Keelualadel droon ei stardi ega lenda sinna.","DJI M4 kasutusjuhend v1.2, ptk 8.10"]]],
+ ["start","Kiirstart","play","Rakendus",[
+  ["Kuidas lendu ette valmistada?","1. Plaan: vali mall ja kontrolli kõrgust, raadiust ja kestust.\n2. Asukoht tuleb GPS-ist. Kui GPS ei tööta, kleebi koordinaadid.\n3. Ilm laaditakse automaatselt.\n4. Õhuruum näitab alasid. Vasta 5 küsimusele ja kinnita.\n5. Riskid ja kontroll-leht.\n6. Kui Valmidus näitab „Valmis stardiks“, vajuta Alusta lendu.",""],
+  ["Mida värvid tähendavad?","Roheline OK: kontroll on tehtud.\nKollane HOIATUS: lennata saab, aga arvesta hoiatusega.\nPunane EI SOBI: sel kujul ei lennata.\nHall KONTROLLIMATA või ANDMED PUUDUVAD: keegi pole veel kontrollinud. Hall ei tähenda kunagi, et kõik on korras.",""],
+  ["Miks rakendus ei näita drooni akut ega asukohta?","Drooni andmed on puldis ja rakendus neid ei dubleeri. Rakendus on tugi ja kindlustus. Ta peab lennuaega, tuletab plaanitud aega meelde, salvestab märked ja hoiab hädaolukorra juhised ja numbrid käepärast.",""]]],
+ ["airapp","Õhuruum rakenduses","air","Rakendus",[
+  ["Mida rakendus kontrollib?","eAIP-st (AIRAC 09/2026) võetud alasid: lennujaamade ja kopteriväljakute UAS-geoalad (EEGZ) koos kõrguspiiridega, piirangu- ja linnukaitsealad (EER) koos hooaegadega, Nurmsi ajutiselt eraldatud ala ja õppelennualad. Rakendus arvutab, kas oled alas, kas lennuring ulatub alasse ja kas kõrgus ületab ala piiri.",ZONES_SRC.label],
+  ["Mida rakendus EI kontrolli?","Valitsuse kehtestatud looduskaitse-, julgeoleku- ja PPA alasid, NOTAM-e ega AIRAC-i uuemaid muudatusi. Need vaata EANS Droonikaardilt. Sellepärast kinnitab õhuruumi alati piloot.",""]]],
+ ["log","Päevik ja intsident","after","Rakendus",[
+  ["Mis päevikusse salvestub?","Lennu number, kuupäev, aeg ja kestus, piloot ja vaatleja, droon ja seerianumber, akud, ala ja koordinaadid, ülesanne, kõrgus, ilm stardil, õhuruum, kontrollide seis, märked ja märkus.",""],
+  ["Kuidas päevikut välja võtta?","Päevikus vali CSV (tabelarvutuse jaoks) või Prindi / PDF. Telefonis vali printimisaknas Jaga ja seejärel Salvesta failidesse.",""],
+  ["Kuidas intsidenti raporteerida?","Ava päevikus lend ja vajuta Koosta intsidendi raport. Lisa kuni 6 fotot. Jaga koos fotodega e-posti, Signali või Teamsi kaudu.",""]]],
+ ["device","Telefon ja GPS","phone","Rakendus",[
+  ["GPS ei tööta avaekraani äpis, Safaris töötab","See on iOS 26 teadaolev viga: avaekraanilt avatud veebiäpp saab asukoha keelu, kuigi Safaris töötab. Lahendused:\n1. Vajuta Plaanis Võta GPS-ist (rakendus ei küsi asukohta enam käivitudes ise).\n2. Kleebi koordinaadid Plaani väljale. Sobib Apple Mapsi või Google Mapsi link, kraadid või DJI puldi koordinaadid.\n3. Lisa leht avaekraanile uuesti ja lülita lisamisaknas Ava veebirakendusena (Open as Web App) välja. Siis avaneb leht Safaris, kus GPS töötab.\n4. Ajutine lahendus: Seaded → Üldine → Kanna üle või lähtesta iPhone → Lähtesta → Lähtesta asukoht ja privaatsus (inglise keeles Settings → General → Transfer or Reset iPhone → Reset → Reset Location & Privacy). See lähtestab kõigi rakenduste asukohaload.","Apple Developer Forums 804381"],
+  ["GPS ei tööta Safaris","Seaded → Privaatsus ja turvalisus → Asukohateenused → Safari veebisaidid → Rakenduse kasutamisel. Seejärel Safaris aA → Veebisaidi seaded → Asukoht → Luba.",""],
+  ["Kas rakendus töötab ilma võrguta?","Jah. Ilma uuendamiseks on vaja võrku, seega laadi ilm kohas, kus on levi. Õhuruumi alad on rakenduse sees ja töötavad ilma võrguta.",""],
+  ["Kus mu andmed on?","Ainult selles seadmes. Võrku läheb ainult ilmapäring Open-Meteosse. Varunda: Seaded → Andmed → Ekspordi.",""]]]
 ];
 const POST=[["dr","Droon ja propellerid üle vaadatud"],["rec","Salvestused olemas ja kopeeritud"],["bat","Akud hoiustatud ohutult"],["salt","Soolaniiskus eemaldatud"],["fault","Vead ja märkused kirja pandud"]];
 const TPL=[
@@ -495,6 +526,8 @@ function vPlan(){
     <div class="fgrid">${f("name","Ala nimi","text",'placeholder="nt Pärnu laht"')}<label class="fld"><span>Ülesanne</span><input class="inp" data-p="goal" value="${esc(P.goal)}" placeholder="nt Otsing merel"></label>
     ${f("lat","Laius (N)","text",'inputmode="decimal" placeholder="58,3859"')}${f("lon","Pikkus (E)","text",'inputmode="decimal" placeholder="24,4971"')}</div>
     <div class="row" style="margin-top:var(--s3)"><button class="btn sm primary" data-a="gpsfix">${ic("gps","sm")}Võta GPS-ist</button><span class="prov">${hasLoc()?esc(P.locSrc||"käsitsi")+" · "+ago(P.locAt):"Ilma asukohata ei saa ilma ega õhuruumi hinnata."}</span></div>
+    ${U.gpsErr?`<p class="gpserr">${ic("info","sm")} GPS: ${U.gpsErr.code===1?"asukoht keelatud":U.gpsErr.code===3?"aegus":"signaal puudub"} (kood ${U.gpsErr.code}) · ${hhmm(U.gpsErr.t)} <button class="btn sm" data-a="gpshelp">Mida teha?</button></p>`:""}
+    <div class="paste"><label class="fld span"><span>Kleebi koordinaadid või kaardilink</span><input class="inp" id="cpaste" placeholder="58.3859, 24.4971 · 58°23'09&quot;N 24°29'50&quot;E · Apple/Google Maps link" autocomplete="off" inputmode="text"></label><button class="btn sm" data-a="coordok">${ic("check","sm")}Kasuta</button></div>
    </section>
   </div><div class="stack">
    <section class="panel"><h2>${ic("flight")}Lend</h2>
@@ -656,13 +689,14 @@ function logPrint(){
 function vHelp(){
   const q=norm(U.hq||"").split(/\s+/).filter(Boolean);
   const hit=t=>q.every(w=>norm(t).includes(w));
-  const secs=HELP.map(([id,t,icn,items])=>[id,t,icn,items.filter(([a,b])=>!q.length||hit(t+" "+a+" "+b))]).filter(s=>s[3].length);
+  const secs=HELP.map(([id,t,icn,grp,items])=>[id,t,icn,grp,items.filter(([a,b,src])=>!q.length||hit(t+" "+a+" "+b+" "+(src||"")))]).filter(x=>x[4].length);
+  const groups=[...new Set(HELP.map(h=>h[3]))];
   return `<div class="pg">${pghd("Juhend","learn")}
-  <label class="hsearch">${ic("search")}<input class="inp" id="hq" type="search" placeholder="Otsi: GPS, NOTAM, aku, päevik, foto…" value="${esc(U.hq||"")}" autocomplete="off" aria-label="Otsi juhendist"></label>
-  ${!q.length?`<div class="hchips">${HELP.map(([id,t,icn])=>`<a class="btn sm" href="#help" data-hjump="${id}">${ic(icn,"sm")}${esc(t)}</a>`).join("")}</div>`:""}
-  ${secs.length?secs.map(([id,t,icn,items])=>`<section class="panel" id="h-${id}"><h2>${ic(icn)}${esc(t)}</h2>${items.map(([a,b])=>`<details ${q.length?"open":""}><summary>${esc(a)}</summary><p>${esc(b).replace(/\n/g,"<br>")}</p></details>`).join("")}</section>`).join("")
+  <label class="hsearch">${ic("search")}<input class="inp" id="hq" type="search" placeholder="Otsi: RTH, aku, NOTAM, A2, GPS…" value="${esc(U.hq||"")}" autocomplete="off" aria-label="Otsi juhendist"></label>
+  ${!q.length?`<section class="panel">`+groups.map(g=>`<div class="hgrp"><span class="lbl">${esc(g)}</span><div class="hchips">${HELP.filter(h=>h[3]===g).map(([id,t,icn])=>`<a class="btn sm" href="#help" data-hjump="${id}">${ic(icn,"sm")}${esc(t)}</a>`).join("")}</div></div>`).join("")+`</section>`:""}
+  ${secs.length?secs.map(([id,t,icn,grp,items],k)=>`${k===0||secs[k-1][3]!==grp?`<h2 class="hgh">${esc(grp)}</h2>`:""}<section class="panel" id="h-${id}"><h2>${ic(icn)}${esc(t)}</h2>${items.map(([a,b,src])=>`<details ${q.length?"open":""}><summary>${esc(a)}</summary><p>${esc(b).replace(/\n/g,"<br>")}</p>${src?`<p class="src">Allikas: ${esc(src)}</p>`:""}</details>`).join("")}</section>`).join("")
    :`<section class="panel"><div class="empty">${ic("search","xl")}<b>Ei leitud</b><span>Proovi teist sõna või vaata hädaolukordi SOS-nupu alt.</span></div></section>`}
-  <section class="panel"><h2>${ic("sos")}Hädaolukorrad</h2><div class="picks" style="margin-top:0">${EMERG.map(e=>`<button data-a="em" data-k="${e[0]}">${ic(e[2])}${esc(e[1])}</button>`).join("")}</div></section>
+  <p class="note">Juhend ei asenda määrusi, DJI kasutusjuhendit ega üksuse korda. Kontrollitud 21.11.2026.</p>
   </div>`;
 }
 /* ---------- SEADED ---------- */
@@ -680,7 +714,8 @@ function vSettings(){
     ${[["opWind","Tuul (m/s)"],["gustDiff","Puhangute vahe (m/s)"],["batMin","Lennuaeg aku kohta (min)"],["wxMaxAgeH","Ilm aegub (h)"]].map(([k,n])=>`<label class="fld"><span>${n}</span><input class="inp" data-lim="${k}" type="number" value="${L[k]}"></label>`).join("")}</div>
     <p class="note">Näidisväärtused. Sea need oma üksuse korra järgi. Tootja piire muuta ei saa.</p></section>
   </div><div class="stack">
-   <section class="panel"><h2>${ic("phone")}Kontaktid</h2><div class="list">${S.contacts.map((c,i)=>`<div class="li"><span><span class="t">${esc(c[0])}</span><br><span class="prov">${esc(c[1])}</span></span><div class="row"><a class="btn sm" href="tel:${esc(c[1].replace(/\s/g,""))}">${ic("phone","sm")}Helista</a>${i?`<button class="ib" data-a="delc" data-i="${i}" aria-label="Kustuta">${ic("trash","sm")}</button>`:""}</div></div>`).join("")}</div>
+   <section class="panel"><h2>${ic("phone")}Ametlikud numbrid</h2><div class="list">${OFFICIAL.concat(ATS.map(a=>[a.n,a.tel,a.h?"Lahtiolek AIP järgi "+hm(a.h[0])+"–"+hm(a.h[1])+" kohaliku aja järgi":""])).map(([n,t,d])=>`<div class="li"><span><span class="t">${esc(n)}</span><br><span class="prov">${esc(t)}${d?" · "+esc(d):""}</span></span><a class="btn sm" href="${telHref(t)}">${ic("phone","sm")}Helista</a></div>`).join("")}</div><p class="note">${esc(OFFICIAL_SRC)}. Neid ei saa muuta.</p></section>
+   <section class="panel"><h2>${ic("phone")}Oma kontaktid</h2><div class="list">${S.contacts.map((c,i)=>`<div class="li"><span><span class="t">${esc(c[0])}</span><br><span class="prov">${esc(c[1])}</span></span><div class="row"><a class="btn sm" href="tel:${esc(c[1].replace(/\s/g,""))}">${ic("phone","sm")}Helista</a>${i?`<button class="ib" data-a="delc" data-i="${i}" aria-label="Kustuta">${ic("trash","sm")}</button>`:""}</div></div>`).join("")}</div>
     <div class="fgrid" style="margin-top:var(--s3)"><input class="inp" id="cn" placeholder="Nimi (nt Pärnu AFIS)"><input class="inp" id="cp" placeholder="Number" inputmode="tel"></div>
     <button class="btn sm" data-a="addc" style="margin-top:var(--s2)">${ic("plus","sm")}Lisa kontakt</button>
     <p class="note">Lisa ainult kontrollitud numbrid oma üksuse korrast.</p></section>
@@ -717,14 +752,42 @@ function go(r,opt={}){
 }
 /* Üks aken korraga: alarm > leht (sheet) > käsupalett. Fookus liigub dialoogi ja tagasi. */
 let _lastFocus=null,_lastSheet=null;
+function parseCoords(t){
+  t=String(t||"").trim();if(!t)return null;let m;
+  const ok=(a,b)=>isFinite(a)&&isFinite(b)&&Math.abs(a)<=90&&Math.abs(b)<=180&&!(a===0&&b===0)?[a,b]:null;
+  if((m=/(?:@|[?&](?:q|ll|query|sll|daddr|center)=)(-?\d{1,2}\.\d+)\s*,\s*(-?\d{1,3}\.\d+)/.exec(t)))return ok(+m[1],+m[2]);
+  const neg=(i,s)=>/[SW]/i.test(s)?-i:i;
+  const dms=[...t.matchAll(/(-?\d{1,3})\s*[°º:\s]\s*(\d{1,2})\s*['′’:\s]\s*(\d{1,2}(?:[.,]\d+)?)\s*(?:["″”]|'')?\s*([NSEW])?/gi)];
+  if(dms.length===2&&/[°'′"″]/.test(t)){const v=dms.map(x=>neg(+x[1]+ +x[2]/60+ parseFloat(x[3].replace(",","."))/3600,x[4]||""));return ok(v[0],v[1])}
+  const dm=[...t.matchAll(/(-?\d{1,3})\s*[°º]\s*(\d{1,2}(?:[.,]\d+)?)\s*['′’]?\s*([NSEW])?/gi)];
+  if(dm.length===2&&!/["″]/.test(t)){const v=dm.map(x=>neg(+x[1]+parseFloat(x[2].replace(",","."))/60,x[3]||""));return ok(v[0],v[1])}
+  const n=t.match(/-?\d{1,3}(?:[.,]\d+)?/g)||[];
+  if(n.length===2)return ok(parseFloat(n[0].replace(",",".")),parseFloat(n[1].replace(",",".")));
+  const f=n.map(x=>parseFloat(x.replace(",",".")));
+  if(n.length===4&&f[1]<60&&f[3]<60)return ok(f[0]+Math.sign(f[0]||1)*f[1]/60,f[2]+Math.sign(f[2]||1)*f[3]/60);
+  if(n.length===6&&f[1]<60&&f[2]<60&&f[4]<60&&f[5]<60)return ok(f[0]+f[1]/60+f[2]/3600,f[3]+f[4]/60+f[5]/3600);
+  return null;
+}
+function sosSheet(){
+  const N=nearestATS(),own=S.contacts.filter(c=>String(c[1]).replace(/\s/g,"")!=="112"),L=hasLoc();
+  const open=N?atsOpen(N.a):null;
+  return `<span class="lbl" style="color:var(--stop-ink)">${ic("sos","sm")} Hädaolukord</span><h2>Mis juhtus?</h2>
+   <div class="calls"><a class="btn danger big" href="tel:112">${ic("phone")}112 · Hädaabi</a>
+    <a class="btn big" href="${telHref(OFFICIAL[1][1])}">${ic("phone")}<span>Lennujuht (EANS)<small>Droon kontrolli alt väljas · ${esc(OFFICIAL[1][1])}</small></span></a>
+    ${N&&N.a.id!=="EETN"?`<a class="btn big" href="${telHref(N.a.tel)}">${ic("phone")}<span>Lähim: ${esc(N.a.n)}<small>${esc(N.a.tel)} · ${fmtKm(N.d)}${N.a.h?" · "+hm(N.a.h[0])+"–"+hm(N.a.h[1])+(open==null?"":open?" · praegu avatud":" · praegu suletud"):""}</small></span></a>`:""}</div>
+   <p class="prov" style="margin:6px 0 0">Lennujuhile ütle: lennusuund, järelejäänud lennuaeg, maksimumkiirus 21 m/s.</p>
+   ${L?`<div class="li" style="margin-top:var(--s3)"><span><span class="t">Sinu asukoht</span><br><span class="mono">${fmtN(num(S.plan.lat),5)} N, ${fmtN(num(S.plan.lon),5)} E</span></span><button class="btn sm" data-a="copyloc">${ic("copy","sm")}Kopeeri</button></div>`:""}
+   <div class="picks">${EMERG.map(e=>`<button data-a="em" data-k="${e[0]}">${ic(e[2])}${esc(e[1])}</button>`).join("")}</div>
+   ${own.length?`<div class="list" style="margin-top:var(--s4)">${own.map(c=>`<div class="li"><span class="t">${esc(c[0])} · <span class="mono">${esc(c[1])}</span></span><a class="btn sm" href="${telHref(c[1])}">${ic("phone","sm")}Helista</a></div>`).join("")}</div>`:""}
+   <details class="allats"><summary>Kõik lennuliiklusteenistused</summary><div class="list">${ATS.map(a=>`<div class="li"><span class="t">${esc(a.n)} · <span class="mono">${esc(a.tel)}</span></span><a class="btn sm" href="${telHref(a.tel)}">${ic("phone","sm")}Helista</a></div>`).join("")}</div><p class="note">${esc(OFFICIAL_SRC)}</p></details>
+   <div class="acts"><button class="btn" data-a="close">Sulge</button></div>`;
+}
 function layer(){
   if(U.alarm)U.sheet=null;
   if((U.sheet||U.alarm)&&U.pal){U.pal=null;drawPal()}
   let h="";const s=U.sheet;
   if(s){let b="";
-   if(s.k==="sos")b=`<span class="lbl" style="color:var(--stop-ink)">${ic("sos","sm")} Hädaolukord</span><h2>Mis juhtus?</h2><div class="picks">${EMERG.map(e=>`<button data-a="em" data-k="${e[0]}">${ic(e[2])}${esc(e[1])}</button>`).join("")}</div>
-     <div class="list" style="margin-top:var(--s4)">${S.contacts.map(c=>`<div class="li"><span class="t">${esc(c[0])} · <span class="mono">${esc(c[1])}</span></span><a class="btn sm danger" href="tel:${esc(c[1].replace(/\s/g,""))}">${ic("phone","sm")}Helista</a></div>`).join("")}</div>
-     <div class="acts"><button class="btn" data-a="close">Sulge</button></div>`;
+   if(s.k==="sos")b=sosSheet();
    else if(s.k==="em"){const e=EMERG.find(x=>x[0]===s.e);b=`<span class="lbl" style="color:var(--stop-ink)">${ic(e[2],"sm")} Hädaolukord</span><h2>${esc(e[1])}</h2>
      <ol class="steps">${e[3].map((q,i)=>`<li><b>${i+1}</b><div><strong>${STEP[i]}</strong><span>${esc(q)}</span></div></li>`).join("")}</ol>
      <p class="note">Üldine juhis. Järgi oma üksuse korda ja DJI kasutusjuhendit.</p><div class="acts"><button class="btn" data-a="sos">${ic("back","sm")}Teised olukorrad</button><button class="btn" data-a="close">Sulge</button></div>`}
@@ -732,6 +795,12 @@ function layer(){
      <p class="mut">${v.k==="stop"?"Sel kujul ei peaks lendama. Kui siiski alustad, märgitakse päevikusse, et start toimus lahtiste kontrollidega.":"Alustada saab, aga päevikusse märgitakse, et start toimus lahtiste kontrollidega."}</p>
      <div class="list">${GATES.filter(x=>G[x.id].st!=="ok").map(x=>`<div class="li"><span class="t">${x.nr} ${x.n} — ${esc(G[x.id].sum)}</span>${chip(G[x.id].st)}</div>`).join("")}</div>
      <div class="acts"><button class="btn primary" data-a="close">Tagasi kontrollima</button><button class="btn" data-a="startok">Alusta teadlikult</button></div>`}
+   else if(s.k==="gpshelp")b=`<span class="lbl">${ic("gps","sm")} Asukoht</span><h2>GPS ei anna asukohta</h2>
+     <p class="mut">${IOSAPP?"iOS 26 avaekraani veebiäpp saab sageli asukoha keelu, kuigi Safaris töötab. See on Apple'i viga.":"Brauser keelas asukoha või ei leidnud signaali."}</p>
+     <ol class="steps">${(IOSAPP?["Kleebi koordinaadid allolevale väljale. Sobib Apple Mapsi või Google Mapsi link, kraadid või DJI puldi koordinaadid.","Või ava see leht Safaris: seal GPS töötab. Lisa leht avaekraanile uuesti ja lülita Ava veebirakendusena (Open as Web App) välja.","Ajutine lahendus: Seaded → Üldine → Kanna üle või lähtesta iPhone → Lähtesta → Lähtesta asukoht ja privaatsus. See lähtestab kõigi rakenduste asukohaload."]
+       :["Luba asukoht brauseri saidi seadetes.","iPhone Safari: Seaded → Privaatsus ja turvalisus → Asukohateenused → Safari veebisaidid → Rakenduse kasutamisel.","Mine lagedale ja proovi uuesti või kleebi koordinaadid."]).map((t,i)=>`<li><b>${i+1}</b><div><span>${esc(t)}</span></div></li>`).join("")}</ol>
+     <div class="paste"><label class="fld span"><span>Koordinaadid või kaardilink</span><input class="inp" id="cpaste2" placeholder="58.3859, 24.4971" autocomplete="off"></label><button class="btn primary" data-a="coordok">${ic("check","sm")}Kasuta</button></div>
+     <div class="acts">${IOSAPP?`<a class="btn" href="${esc(location.href.split("#")[0])}#plan" target="_blank" rel="noopener">${ic("up","sm")}Ava Safaris</a>`:""}<button class="btn" data-a="gpsfix">${ic("gps","sm")}Proovi uuesti</button><button class="btn" data-a="close">Sulge</button></div>`;
    else if(s.k==="stop")b=`<span class="lbl">Lõpeta lend</span><h2>Droon on maandunud?</h2><p class="mut">Lennuaeg ${fmtT(curEl())}. Lend salvestub päevikusse.</p>
      <div class="fgrid" style="margin-top:var(--s3)"><label class="fld"><span>Kasutatud akusid</span><input class="inp" id="sbats" type="number" min="0" max="20" value="${Math.max(1,Math.ceil(curEl()/batLimit().sec))}" inputmode="numeric"></label><label class="fld"><span>Vaatleja</span><input class="inp" id="sobs" value="${esc(S.profile.obs)}" placeholder="nimi"></label>
       <label class="fld span"><span>Märkus</span><input class="inp" id="snote" placeholder="nt tuul tugevnes, leid kell 14:20"></label></div>
@@ -744,7 +813,7 @@ function layer(){
    else if(s.k==="confirm")b=`<h2>${esc(s.t)}</h2><p class="mut">${esc(s.d)}</p><div class="acts"><button class="btn danger" data-a="confirmok">${esc(s.ok)}</button><button class="btn" data-a="close">Tühista</button></div>`;
    else if(s.k==="text")b=`<h2>${esc(s.t)}</h2><textarea class="inp" id="tx" style="min-height:220px;font-family:var(--font-mono);font-size:12px" ${s.ro?"readonly":""}>${esc(s.v||"")}</textarea>
      <div class="acts">${s.dl?`<button class="btn primary" data-a="dl">${ic("down","sm")}Laadi alla</button>`:""}${s.ro?`<button class="btn ${s.dl?"":"primary"}" data-a="copytx">${ic("copy","sm")}Kopeeri</button>`:`<button class="btn primary" data-a="importok">${ic("up","sm")}Impordi</button>`}<button class="btn" data-a="close">Sulge</button></div>`;
-   h+=`<div class="veil" data-a="veil"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(s.t||({sos:"Hädaolukord",em:"Hädaolukorra juhis",start:"Stardi kinnitus",stop:"Lõpeta lend",mark:"Märge"})[s.k]||"Dialoog")}">${b}</div></div>`}
+   h+=`<div class="veil" data-a="veil"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(s.t||({sos:"Hädaolukord",em:"Hädaolukorra juhis",start:"Stardi kinnitus",stop:"Lõpeta lend",mark:"Märge",gpshelp:"Asukoht"})[s.k]||"Dialoog")}">${b}</div></div>`}
   if(U.alarm)h+=`<div class="alarm" role="alertdialog" aria-modal="true" aria-label="Plaanitud lennuaeg täis">${ic("bat","xl")}<span class="mono">PLAANITUD AKU AEG TÄIS</span><h2>Kontrolli<br>puldist akut</h2><p style="margin:0;max-width:30ch">See on meeldetuletus. Tegelik aku tase on puldis.</p><button class="btn" data-a="alarmok">Selge</button><button class="btn" data-a="alarmsos" style="background:transparent;color:inherit;border:2px solid currentColor">${ic("sos","sm")}Hädaolukord</button></div>`;
   const opened=(s||U.alarm)&&_lastSheet!==(s||"alarm");
   if(opened&&!_lastSheet)_lastFocus=document.activeElement;
@@ -785,16 +854,21 @@ async function omFetch(silent){
   }catch(e){U.net=false;const m=!navigator.onLine?"võrguühendus puudub":e.name==="AbortError"?"ei vastanud 12 s jooksul":e.code===429||/limit/i.test(e.message)?"päringulimiit täis, proovi hiljem":e.code?"viga "+e.code:e.message==="shape"||e.message==="type"?"vastus oli vigane":"ei vastanud";ev("wx","Open-Meteo: "+m,"warn");if(!silent)toast("Open-Meteo: "+m+". Sisesta väärtused käsitsi.")}
   U.wxBusy=false;render(true);
 }
+/* iOS avaekraani veebiäpp: asukohta küsitakse ainult nupuvajutusega (iOS 26 viga, Apple Developer Forums 804381) */
+const IOS=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1);
+const STANDALONE=(()=>{try{return matchMedia("(display-mode: standalone)").matches||navigator.standalone===true}catch(e){return false}})();
+const IOSAPP=IOS&&STANDALONE;
 function gpsFix(silent,retry){
   if(!navigator.geolocation){if(!silent)toast("Selles keskkonnas GPS puudub. Sisesta koordinaadid käsitsi.");return}
   navigator.geolocation.getCurrentPosition(p=>{S.plan.lat=p.coords.latitude.toFixed(5);S.plan.lon=p.coords.longitude.toFixed(5);S.plan.locSrc="GPS ±"+Math.round(p.coords.accuracy)+" m";S.plan.locAt=now();
-    if(!S.plan.name)S.plan.name="GPS-asukoht";if(!silent||!U.gpsLogged){ev("gps","fix "+fmtN(p.coords.latitude,4)+" N · "+fmtN(p.coords.longitude,4)+" E · ±"+Math.round(p.coords.accuracy)+" m","ok");U.gpsLogged=true}render(true);if(S.auto)autoRun()},
+    U.gpsOk=true;U.gpsErr=null;U.gpsDenied=false;if(!S.plan.name)S.plan.name="GPS-asukoht";if(!silent||!U.gpsLogged){ev("gps","fix "+fmtN(p.coords.latitude,4)+" N · "+fmtN(p.coords.longitude,4)+" E · ±"+Math.round(p.coords.accuracy)+" m","ok");U.gpsLogged=true}render(true);if(S.auto)autoRun()},
    err=>{
-    if(err&&err.code===1){U.gpsDenied=true;const ios=/iP(hone|ad|od)/.test(navigator.userAgent);
+    U.gpsErr={code:err?err.code:0,t:now()};
+    if(err&&err.code===1){U.gpsDenied=true;if(!silent&&IOSAPP){U.sheet={k:"gpshelp"};layer();ev("gps","asukoht keelatud (iOS veebiäpp)","warn");render(true);return}const ios=IOS;
       const m=ios?"Asukoht on keelatud. iPhone: Seaded → Privaatsus ja turvalisus → Asukohateenused → Safari veebisaidid → „Rakenduse kasutamisel“. Siis Safaris aA → Veebisaidi seaded → Asukoht → Luba.":"Asukoht on keelatud. Luba see brauseri saidi seadetes või sisesta koordinaadid käsitsi.";
       if(!silent||!U.gpsHint){U.gpsHint=true;ev("gps","asukoht keelatud","warn");toast(m,9000)}return}
     if(!retry){gpsFix(silent,true);return}
-    U.gpsDenied=true;ev("gps",err&&err.code===3?"GPS ei leidnud asukohta õigel ajal":"GPS-signaal puudub","warn");if(!silent)toast("GPS ei leidnud asukohta. Mine lagedale või sisesta koordinaadid käsitsi.")
+    U.gpsDenied=true;render(true);ev("gps",err&&err.code===3?"GPS ei leidnud asukohta õigel ajal":"GPS-signaal puudub","warn");if(!silent)toast("GPS ei leidnud asukohta. Mine lagedale või sisesta koordinaadid käsitsi.")
    },retry?{enableHighAccuracy:false,timeout:20000,maximumAge:300000}:{enableHighAccuracy:true,timeout:12000,maximumAge:60000});
 }
 /* ---------- AUTOMAATIKA: GPS → ilm → ilmapunktid; kõik on nähtav ja käsitsi ülekirjutatav ---------- */
@@ -808,7 +882,7 @@ function autoChk(){
 function autoRun(){
   if(!S.auto||S.flight.run&&false)return;
   const gpsOwned=!hasLoc()||String(S.plan.locSrc).startsWith("GPS");
-  if(gpsOwned&&!U.gpsDenied&&(!hasLoc()||now()-S.plan.locAt>10*60000)){gpsFix(true);if(!hasLoc())return}
+  if(gpsOwned&&!U.gpsDenied&&(!IOSAPP||U.gpsOk)&&(!hasLoc()||now()-S.plan.locAt>10*60000)){gpsFix(true);if(!hasLoc())return}
   if(hasLoc()&&U.net!==false&&(!S.wx.at||now()-S.wx.at>30*60000||S.wx.src!=="Open-Meteo"&&!Object.keys(S.wx.f).length)){omFetch(true).then(()=>render(true))}
   if(!S.plan.time){const d=new Date();S.plan.time=String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0")}
 }
@@ -865,7 +939,11 @@ document.addEventListener("click",e=>{
    case "alarmok":U.alarm=false;layer();break;
    case "alarmsos":U.alarm=false;U.sheet={k:"sos"};layer();break;
    case "tpl":{const tp=TPL.find(x=>x[0]===a.dataset.k);Object.assign(S.plan,tp[3],{tpl:tp[0]});ev("sys","mall: "+tp[1].toLowerCase(),"ok");render(true);break}
-   case "gpsfix":gpsFix();break;
+   case "gpsfix":U.gpsDenied=false;gpsFix();break;
+   case "gpshelp":U.sheet={k:"gpshelp"};layer();break;
+   case "coordok":{const c=parseCoords((a.closest(".paste")?.querySelector("input")||$("#cpaste"))?.value);if(!c){toast("Koordinaate ei tuvastatud. Näide: 58.3859, 24.4971 või 58°23'09\"N 24°29'50\"E",6000);break}
+     S.plan.lat=c[0].toFixed(5);S.plan.lon=c[1].toFixed(5);S.plan.locSrc="kleebitud";S.plan.locAt=now();if(!S.plan.name)S.plan.name="Kleebitud asukoht";ev("gps","asukoht kleebitud "+fmtN(c[0],4)+" N · "+fmtN(c[1],4)+" E","ok");U.sheet=null;render(true);if(S.auto)omFetch(true).then(()=>render(true));toast("Asukoht lisatud");break}
+   case "copyloc":copy(fmtN(num(S.plan.lat),5)+" N, "+fmtN(num(S.plan.lon),5)+" E ("+String(S.plan.lat)+", "+String(S.plan.lon)+")","Koordinaadid kopeeritud");break;
    case "omfetch":omFetch();break;
    case "wxok":S.wx.confirmed=now();ev("wx","hinnang kinnitatud","ok");render(true);break;
    case "airok":S.air.confirmed=now();ev("air","kinnitatud käsitsi","ok");render(true);break;
@@ -926,7 +1004,7 @@ function cmds(){
   L.push({g:"Tegevus",n:"Vaheta teemat: "+(S.theme==="dark"?"Grafiit":"Tume"),ic:"sun",f:()=>{S.theme=S.theme==="dark"?"graphite":"dark";render(true);fxResize()}});
   TPL.forEach(t=>L.push({g:"Mall",n:t[1],ic:t[2],f:()=>{Object.assign(S.plan,t[3],{tpl:t[0]});go("plan")}}));
   EMERG.forEach(e=>L.push({g:"Hädaolukord",n:e[1],ic:e[2],f:()=>{U.sheet={k:"em",e:e[0]};layer()}}));
-  HELP.forEach(([id,t,icn,items])=>items.forEach(([q,a])=>L.push({g:"Juhend",n:q,ic:icn,h:t,x:a,f:()=>{U.hq=q;go("help")}})));
+  HELP.forEach(([id,t,icn,grp,items])=>items.forEach(([q,a,src])=>L.push({g:"Juhend",n:q,ic:icn,h:t,x:a+" "+(src||""),f:()=>{U.hq=q;go("help")}})));
   CHECK.forEach(gr=>gr.items.forEach(i=>L.push({g:"Kontrollpunkt",n:i[1],ic:gr.ic,h:gr.g,f:()=>go("chk")})));
   return L;
 }
@@ -951,6 +1029,7 @@ document.addEventListener("keydown",e=>{
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="k"){e.preventDefault();U.pal?(U.pal=null,drawPal()):openPal();return}
   if(U.pal){const n=palList().length;if(e.key==="Escape"){U.pal=null;drawPal()}else if(e.key==="ArrowDown"){e.preventDefault();U.pal.i=Math.min(U.pal.i+1,n-1);drawPal()}else if(e.key==="ArrowUp"){e.preventDefault();U.pal.i=Math.max(0,U.pal.i-1);drawPal()}else if(e.key==="Enter"){e.preventDefault();runPal(U.pal.i)}return}
   if(e.key==="Escape"&&U.sheet){U.sheet=null;layer()}
+  if(e.key==="Enter"&&(e.target.id==="cpaste"||e.target.id==="cpaste2")){e.preventDefault();const b=e.target.closest(".paste")?.querySelector('[data-a="coordok"]');b&&b.click()}
   if((e.key==="Enter"||e.key===" ")&&e.target.matches&&e.target.matches(".loc[data-go]")){e.preventDefault();go("plan")}
   if(e.key==="Tab"&&(U.sheet||U.alarm)){const f=[...document.querySelectorAll("#layer .sheet button:not([disabled]),#layer .sheet a,#layer .sheet textarea,#layer .alarm button")];if(f.length){const i=f.indexOf(document.activeElement);if(e.shiftKey&&i<=0){e.preventDefault();f[f.length-1].focus()}else if(!e.shiftKey&&i===f.length-1){e.preventDefault();f[0].focus()}}}
 });
