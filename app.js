@@ -2,7 +2,7 @@
 /* =====================================================================
    ANDMED (sisu) · kõik väärtused on rakenduse sees, võrku ei vaja
    ===================================================================== */
-const VERSION="2026.11.21-v8";
+const VERSION="2026.11.21-v9";
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const $=s=>document.querySelector(s);
 
@@ -65,7 +65,8 @@ const IC={
  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',
  lock:'<path d="M5.5 10.5h13v10h-13z"/><path d="M8.5 10.5V7a3.5 3.5 0 0 1 7 0v3.5"/>',
  hex:'<path d="M12 2.5l8.2 4.75v9.5L12 21.5l-8.2-4.75v-9.5z"/>',
- rotate:'<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4.5h-4.5"/>'
+ rotate:'<path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v4.5h-4.5"/>',
+ chat:'<path d="M4 4.5h16v11H10l-4.5 4v-4H4z"/><path d="M8 9h8M8 12h5"/>'
 };
 const ic=(n,c="")=>`<svg class="ic ${c}" viewBox="0 0 24 24" aria-hidden="true">${IC[n]||IC.hex}</svg>`;
 
@@ -214,12 +215,14 @@ const TPL=[
    OLEK (salvestatakse ainult sellesse seadmesse)
    ===================================================================== */
 const KEY="m4t.neoon.v1";
+const p2=n=>String(n).padStart(2,"0");
+const localDate=(d=new Date())=>d.getFullYear()+"-"+p2(d.getMonth()+1)+"-"+p2(d.getDate());
 const now=()=>Date.now();
 function fresh(){return{
   v:1,theme:"dark",bgfx:true,auto:true,chkM:{},limits:{opWind:8,gustDiff:5,batMin:30,wxMaxAgeH:3},contacts:[["Hädaabi","112"]],
-  plan:{name:"",lat:"",lon:"",locSrc:"",locAt:0,date:new Date().toISOString().slice(0,10),time:"",goal:"",alt:60,radius:1000,dur:45,bats:3,obst:20,tpl:""},
+  plan:{name:"",lat:"",lon:"",locSrc:"",locAt:0,date:localDate(),time:"",goal:"",alt:60,radius:1000,dur:45,bats:3,obst:20,tpl:""},
   wx:{f:{},src:"",at:0,confirmed:0},air:{a:{},notes:"",confirmed:0},risk:{l:{},confirmed:0},chk:{},
-  flight:{n:1,run:false,start:0,acc:0,w1:false,w2:false,marks:[]},log:[],incs:[],profile:{pilot:"",obs:"",drone:"Matrice 4T",sn:""},recent:[],ev:[]};}
+  flight:{n:1,run:false,start:0,acc:0,w1:false,w2:false,marks:[]},log:[],incs:[],profile:{pilot:"",obs:"",drone:"Matrice 4T",sn:""},intro:false,recent:[],ev:[]};}
 let S;
 /* Turvalisus: kõik salvestatud või imporditud andmed läbivad tüübikontrolli ja piirangud (ei usalda sisendit) */
 const clampN=(v,lo,hi,d)=>{const n=typeof v==="number"?v:parseFloat(String(v??"").replace(",","."));return isFinite(n)?Math.min(hi,Math.max(lo,n)):d};
@@ -244,6 +247,7 @@ function sanitize(o){
   d.chk=pick(o.chk,CK_ALL,v=>v==="ok"||v==="bad"?v:undefined);d.chkM=pick(o.chkM,CK_ALL,v=>v===true?true:undefined);d.chkT=pick(o.chkT,CK_ALL,v=>clampN(v,0,4e12,undefined));
   const mk=m=>isObj(m)&&MARK[m.k]?{t:clampN(m.t,0,4e12,0),k:m.k,note:str(m.note,1000),lat:m.lat==null?null:clampN(m.lat,-90,90,null),lon:m.lon==null?null:clampN(m.lon,-180,180,null),ph:Array.isArray(m.ph)?m.ph.filter(x=>typeof x==="string"&&/^ph[a-z0-9]{4,30}$/.test(x)).slice(0,6):[]}:null;
   const F=o.flight||{};d.flight={n:Math.round(clampN(F.n,1,99999,1)),run:F.run===true,start:clampN(F.start,0,4e12,0),acc:clampN(F.acc,0,86400,0),w1:F.w1===true,w2:F.w2===true,marks:Array.isArray(F.marks)?F.marks.slice(0,50).map(mk).filter(Boolean):[]};
+  d.intro=o.intro===true;
   const PR=o.profile||{};d.profile={pilot:str(PR.pilot,60),obs:str(PR.obs,60),drone:str(PR.drone,40)||"Matrice 4T",sn:str(PR.sn,40)};
   const GS=["ok","warn","partial","stale","missing","unchecked","stop"];
   if(Array.isArray(o.log))d.log=o.log.slice(0,2000).filter(isObj).map(l=>{const st=clampN(l.start,0,4e12,0);return{id:/^L[a-z0-9]{3,20}$/.test(l.id)?l.id:"L"+Math.round(st).toString(36),n:Math.round(clampN(l.n,1,99999,1)),start:st,dur:Math.round(clampN(l.dur,0,86400,0)),
@@ -719,6 +723,9 @@ function vSettings(){
     <div class="fgrid" style="margin-top:var(--s3)"><input class="inp" id="cn" placeholder="Nimi (nt Pärnu AFIS)"><input class="inp" id="cp" placeholder="Number" inputmode="tel"></div>
     <button class="btn sm" data-a="addc" style="margin-top:var(--s2)">${ic("plus","sm")}Lisa kontakt</button>
     <p class="note">Lisa ainult kontrollitud numbrid oma üksuse korrast.</p></section>
+   <section class="panel"><h2>${ic("chat")}Testimine</h2><p class="prov" style="margin:0 0 var(--s3)">Versioon ${esc(VERSION)} · ${esc(deviceInfo())}</p>
+    <div class="row"><button class="btn primary" data-a="feedback">${ic("copy","sm")}Kopeeri tagasiside mall</button><button class="btn" data-a="intro">${ic("info","sm")}Tutvustus</button></div>
+    <p class="note">Mall sisaldab versiooni ja seadme andmeid, mitte sinu asukohta ega lende. Kleebi see Signalisse.</p></section>
    <section class="panel"><h2>${ic("lock")}Turvalisus</h2><div class="list">
     ${[["Andmed","ainult selles seadmes, pilve ega kontot pole"],["Võrk","ainult Open-Meteo ilm; muud ühendused on keelatud (CSP)"],["Kolmandad osapooled","puuduvad: fonte, analüütikat ega jälgimist pole"],["Sisend","kõik väljad ja import kontrollitakse ja piiratakse"],["Salastatud teave","ÄRA SISESTA: rakendus ei ole akrediteeritud süsteem"]].map(([a,b])=>`<div class="li"><span class="t">${a}</span><span class="prov" style="grid-column:1/-1">${b}</span></div>`).join("")}</div>
     <p class="note">Ehitatud NATO-laadsete põhimõtete järgi (kaitse mitmes kihis, minimaalsed õigused, andmete minimeerimine). Ei ole sertifitseeritud ega akrediteeritud. Kaitse seadet ennast: ekraanilukk ja kettakrüpteering.</p></section>
@@ -768,6 +775,18 @@ function parseCoords(t){
   if(n.length===6&&f[1]<60&&f[2]<60&&f[4]<60&&f[5]<60)return ok(f[0]+f[1]/60+f[2]/3600,f[3]+f[4]/60+f[5]/3600);
   return null;
 }
+function deviceInfo(){const ua=navigator.userAgent;let os="";let m;
+  if((m=/iPhone OS (\d+)[_.](\d+)/.exec(ua)))os="iPhone iOS "+m[1]+"."+m[2];else if((m=/iPad.*OS (\d+)[_.](\d+)/.exec(ua)))os="iPad iOS "+m[1]+"."+m[2];else if((m=/Android (\d+(?:\.\d+)?)/.exec(ua)))os="Android "+m[1];else if(/Mac OS X/.test(ua))os="Mac";else if(/Windows/.test(ua))os="Windows";else os="muu";
+  const br=/CriOS|Chrome\//.test(ua)?"Chrome":/FxiOS|Firefox/.test(ua)?"Firefox":/EdgiOS|Edg\//.test(ua)?"Edge":/Safari/.test(ua)?"Safari":"brauser";
+  return os+" · "+br+" · avaekraani äpp: "+(STANDALONE?"jah":"ei")+" · ekraan "+innerWidth+"×"+innerHeight}
+function feedbackText(){return `M4T tagasiside · versioon ${VERSION}
+Seade: ${deviceInfo()}
+GPS: ${U.gpsOk||String(S.plan.locSrc).startsWith("GPS")?"töötas":U.gpsErr?"viga "+U.gpsErr.code:"ei proovitud"} · ilm: ${S.wx.src||"puudub"}${U.net===false?" (ühenduse viga)":""}
+---
+1. Mis töötas hästi:
+2. Mis ei töötanud või oli segane (ekraan, samm):
+3. Mida lisaksid või muudaksid:
+4. Kas kasutaksid seda päris lennu eel? Miks?`}
 function sosSheet(){
   const N=nearestATS(),own=S.contacts.filter(c=>String(c[1]).replace(/\s/g,"")!=="112"),L=hasLoc();
   const open=N?atsOpen(N.a):null;
@@ -795,6 +814,11 @@ function layer(){
      <p class="mut">${v.k==="stop"?"Sel kujul ei peaks lendama. Kui siiski alustad, märgitakse päevikusse, et start toimus lahtiste kontrollidega.":"Alustada saab, aga päevikusse märgitakse, et start toimus lahtiste kontrollidega."}</p>
      <div class="list">${GATES.filter(x=>G[x.id].st!=="ok").map(x=>`<div class="li"><span class="t">${x.nr} ${x.n} — ${esc(G[x.id].sum)}</span>${chip(G[x.id].st)}</div>`).join("")}</div>
      <div class="acts"><button class="btn primary" data-a="close">Tagasi kontrollima</button><button class="btn" data-a="startok">Alusta teadlikult</button></div>`}
+   else if(s.k==="intro")b=`<span class="lbl">${ic("hex","sm")} Testversioon ${esc(VERSION)}</span><h2>Tere tulemast testima</h2>
+     <p class="mut">MATRiCE 4T Neoonkontroll on droonilennu eelkontrolli ja lennupäeviku tugirakendus. See ei asenda DJI pulti, EANS Droonikaarti ega üksuse korda.</p>
+     <ol class="steps">${["Plaan: asukoht (GPS või kleebitud koordinaadid), kõrgus ja raadius.","Valmidus: ilm, õhuruum, riskid ja kontroll-leht. Hall tähendab „kontrollimata“, mitte „korras“.","Lend: lennuaeg ja märked. Pärast lendu salvestub kõik päevikusse.","Punane SOS-nupp ülal paremal: hädaolukorra juhised ja ametlikud numbrid."].map((t,i)=>`<li><b>${i+1}</b><div><span>${esc(t)}</span></div></li>`).join("")}</ol>
+     <p class="note">Andmed jäävad ainult sinu telefoni. Ära sisesta salastatud teavet. Tagasiside: Seaded → Testimine → Kopeeri tagasiside mall.</p>
+     <div class="acts"><button class="btn primary" data-a="introok">${ic("check","sm")}Alusta</button><button class="btn" data-a="feedback">${ic("copy","sm")}Kopeeri tagasiside mall</button></div>`;
    else if(s.k==="gpshelp")b=`<span class="lbl">${ic("gps","sm")} Asukoht</span><h2>GPS ei anna asukohta</h2>
      <p class="mut">${IOSAPP?"iOS 26 avaekraani veebiäpp saab sageli asukoha keelu, kuigi Safaris töötab. See on Apple'i viga.":"Brauser keelas asukoha või ei leidnud signaali."}</p>
      <ol class="steps">${(IOSAPP?["Kleebi koordinaadid allolevale väljale. Sobib Apple Mapsi või Google Mapsi link, kraadid või DJI puldi koordinaadid.","Või ava see leht Safaris: seal GPS töötab. Lisa leht avaekraanile uuesti ja lülita Ava veebirakendusena (Open as Web App) välja.","Ajutine lahendus: Seaded → Üldine → Kanna üle või lähtesta iPhone → Lähtesta → Lähtesta asukoht ja privaatsus. See lähtestab kõigi rakenduste asukohaload."]
@@ -813,7 +837,7 @@ function layer(){
    else if(s.k==="confirm")b=`<h2>${esc(s.t)}</h2><p class="mut">${esc(s.d)}</p><div class="acts"><button class="btn danger" data-a="confirmok">${esc(s.ok)}</button><button class="btn" data-a="close">Tühista</button></div>`;
    else if(s.k==="text")b=`<h2>${esc(s.t)}</h2><textarea class="inp" id="tx" style="min-height:220px;font-family:var(--font-mono);font-size:12px" ${s.ro?"readonly":""}>${esc(s.v||"")}</textarea>
      <div class="acts">${s.dl?`<button class="btn primary" data-a="dl">${ic("down","sm")}Laadi alla</button>`:""}${s.ro?`<button class="btn ${s.dl?"":"primary"}" data-a="copytx">${ic("copy","sm")}Kopeeri</button>`:`<button class="btn primary" data-a="importok">${ic("up","sm")}Impordi</button>`}<button class="btn" data-a="close">Sulge</button></div>`;
-   h+=`<div class="veil" data-a="veil"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(s.t||({sos:"Hädaolukord",em:"Hädaolukorra juhis",start:"Stardi kinnitus",stop:"Lõpeta lend",mark:"Märge",gpshelp:"Asukoht"})[s.k]||"Dialoog")}">${b}</div></div>`}
+   h+=`<div class="veil" data-a="veil"><div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(s.t||({sos:"Hädaolukord",em:"Hädaolukorra juhis",start:"Stardi kinnitus",stop:"Lõpeta lend",mark:"Märge",gpshelp:"Asukoht",intro:"Tere tulemast"})[s.k]||"Dialoog")}">${b}</div></div>`}
   if(U.alarm)h+=`<div class="alarm" role="alertdialog" aria-modal="true" aria-label="Plaanitud lennuaeg täis">${ic("bat","xl")}<span class="mono">PLAANITUD AKU AEG TÄIS</span><h2>Kontrolli<br>puldist akut</h2><p style="margin:0;max-width:30ch">See on meeldetuletus. Tegelik aku tase on puldis.</p><button class="btn" data-a="alarmok">Selge</button><button class="btn" data-a="alarmsos" style="background:transparent;color:inherit;border:2px solid currentColor">${ic("sos","sm")}Hädaolukord</button></div>`;
   const opened=(s||U.alarm)&&_lastSheet!==(s||"alarm");
   if(opened&&!_lastSheet)_lastFocus=document.activeElement;
@@ -843,7 +867,7 @@ async function omFetch(silent){
     if(!r.ok){let why="HTTP "+r.status;try{const ej=await r.json();if(ej&&ej.reason)why=String(ej.reason).slice(0,120)}catch(_){}const er=new Error(why);er.code=r.status;throw er}if(!/json/.test(r.headers.get("content-type")||""))throw new Error("type");const j=await r.json(),H=j&&j.hourly;
     const okArr=k=>Array.isArray(H&&H[k])&&H[k].length===H.time.length;if(!H||!Array.isArray(H.time)||!H.time.length||H.time.length>400||!["temperature_2m","wind_speed_10m","wind_gusts_10m","wind_direction_10m","weather_code","visibility"].every(okArr))throw new Error("shape");
     const target=(S.plan.date&&S.plan.time)?S.plan.date+"T"+S.plan.time.slice(0,2)+":00":null;
-    let i=target?H.time.indexOf(target):-1;if(i<0){const n=new Date();const key=n.toISOString().slice(0,13);i=Math.max(0,H.time.findIndex(t=>t.slice(0,13)>=key.slice(0,13)))}
+    let i=target?H.time.indexOf(target):-1;if(i<0){const off=isFinite(j.utc_offset_seconds)?j.utc_offset_seconds:-new Date().getTimezoneOffset()*60;const key=new Date(now()+off*1000).toISOString().slice(0,13);i=Math.max(0,H.time.findIndex(t=>t.slice(0,13)>=key))}
     const wc=H.weather_code[i],t=now(),src="Open-Meteo "+H.time[i].slice(11,16);
     const LIM={w:[0,80],g:[0,100],dir:[0,360],t:[-60,60],vis:[0,100]};const put=(k,v)=>{if(v==null||v==="")return;if(LIM[k]){const n=parseFloat(v);if(!isFinite(n)||n<LIM[k][0]||n>LIM[k][1])return}S.wx.f[k]={v:String(v),src,at:t}};
     put("w",H.wind_speed_10m[i]?.toFixed(1));put("g",H.wind_gusts_10m[i]?.toFixed(1));put("dir",H.wind_direction_10m[i]);put("t",H.temperature_2m[i]?.toFixed(1));
@@ -879,7 +903,13 @@ function autoChk(){
   set("vis",e.vis==null?null:e.vis>=2?"bad":"ok");
   set("tempc",e.t==null?null:e.t>=3?"bad":"ok");
 }
+/* vana plaaniaeg (eilne või üle tunni möödas) viiakse tänasele: muidu ilm ja hooajalised alad oleksid vale päeva kohta */
+function planRoll(){
+  if(S.flight.run)return false;const t=Date.parse(S.plan.date+"T"+(/^\d{2}:\d{2}$/.test(S.plan.time)?S.plan.time:"00:00"));
+  if(!isNaN(t)&&t>=now()-60*60000)return false;
+  S.plan.date=localDate();S.plan.time=hhmm(now());_ACk="";if(S.wx.src==="Open-Meteo")S.wx.at=0;ev("sys","plaani aeg viidi tänasele: "+S.plan.time,"ok");return true}
 function autoRun(){
+  if(planRoll())render(true);
   if(!S.auto||S.flight.run&&false)return;
   const gpsOwned=!hasLoc()||String(S.plan.locSrc).startsWith("GPS");
   if(gpsOwned&&!U.gpsDenied&&(!IOSAPP||U.gpsOk)&&(!hasLoc()||now()-S.plan.locAt>10*60000)){gpsFix(true);if(!hasLoc())return}
@@ -943,6 +973,9 @@ document.addEventListener("click",e=>{
    case "gpshelp":U.sheet={k:"gpshelp"};layer();break;
    case "coordok":{const c=parseCoords((a.closest(".paste")?.querySelector("input")||$("#cpaste"))?.value);if(!c){toast("Koordinaate ei tuvastatud. Näide: 58.3859, 24.4971 või 58°23'09\"N 24°29'50\"E",6000);break}
      S.plan.lat=c[0].toFixed(5);S.plan.lon=c[1].toFixed(5);S.plan.locSrc="kleebitud";S.plan.locAt=now();if(!S.plan.name)S.plan.name="Kleebitud asukoht";ev("gps","asukoht kleebitud "+fmtN(c[0],4)+" N · "+fmtN(c[1],4)+" E","ok");U.sheet=null;render(true);if(S.auto)omFetch(true).then(()=>render(true));toast("Asukoht lisatud");break}
+   case "feedback":copy(feedbackText(),"Tagasiside mall kopeeritud. Kleebi see Signalisse ja täida.");break;
+   case "introok":S.intro=true;U.sheet=null;save();layer();break;
+   case "intro":U.sheet={k:"intro"};layer();break;
    case "copyloc":copy(fmtN(num(S.plan.lat),5)+" N, "+fmtN(num(S.plan.lon),5)+" E ("+String(S.plan.lat)+", "+String(S.plan.lon)+")","Koordinaadid kopeeritud");break;
    case "omfetch":omFetch();break;
    case "wxok":S.wx.confirmed=now();ev("wx","hinnang kinnitatud","ok");render(true);break;
@@ -999,6 +1032,7 @@ function cmds(){
   L.push({g:"Tegevus",n:"Alusta lendu",ic:"play",f:()=>{if(verdict().k==="ok")startFlight();else{U.sheet={k:"start"};layer()}}});
   L.push({g:"Tegevus",n:"Lae ilm (Open-Meteo)",ic:"rotate",f:()=>{go("wx");omFetch()}});
   L.push({g:"Tegevus",n:"Võta asukoht GPS-ist",ic:"gps",f:()=>{go("plan");gpsFix()}});
+  L.push({g:"Tegevus",n:"Kopeeri tagasiside mall",ic:"copy",f:()=>copy(feedbackText(),"Tagasiside mall kopeeritud. Kleebi see Signalisse.")});
   L.push({g:"Tegevus",n:"Uus lend",ic:"plus",f:()=>{U.sheet={k:"confirm",t:"Alusta uut lendu?",d:"Kontrollnimekiri ja kinnitused tühjenevad.",ok:"Uus lend",fn:newFlight};layer()}});
   L.push({g:"Tegevus",n:"Kopeeri plaani kokkuvõte",ic:"copy",f:()=>copy(planSummary())});
   L.push({g:"Tegevus",n:"Vaheta teemat: "+(S.theme==="dark"?"Grafiit":"Tume"),ic:"sun",f:()=>{S.theme=S.theme==="dark"?"graphite":"dark";render(true);fxResize()}});
@@ -1093,6 +1127,7 @@ document.addEventListener("visibilitychange",()=>{if(!document.hidden)fxKick()})
 try{S=sanitize(JSON.parse(localStorage.getItem(KEY)||"null"))}catch(e){S=fresh()}
 if(!S.ev.length)ev("sys","käivitus · lend nr "+S.flight.n+" · nimekiri tühi","ok");
 const h1=(location.hash||"").slice(1),h0=LEGACY[h1]||h1;U.r=VIEWS[h0]&&h0!=="inc"?h0:(S.flight.run?"flight":"ready");
-fxResize();autoChk();render();fxKick();setTimeout(autoRun,600);
+planRoll();fxResize();autoChk();render();fxKick();setTimeout(autoRun,600);
+if(!S.intro){U.sheet={k:"intro"};layer()}
 if("serviceWorker" in navigator&&location.protocol==="https:"){try{const had=!!navigator.serviceWorker.controller;let rl=false;navigator.serviceWorker.addEventListener("controllerchange",()=>{if(had&&!rl&&!S.flight.run){rl=true;location.reload()}});navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(r=>{r.update().catch(()=>{});document.addEventListener("visibilitychange",()=>{if(!document.hidden)r.update().catch(()=>{})})}).catch(()=>{})}catch(e){}}
 addEventListener("hashchange",()=>{const h=LEGACY[location.hash.slice(1)]||location.hash.slice(1);if(VIEWS[h]&&h!=="inc"&&h!==U.r)go(h,{noRecent:true})});
